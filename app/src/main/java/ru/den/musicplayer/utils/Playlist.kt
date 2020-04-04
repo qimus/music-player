@@ -13,7 +13,7 @@ import ru.den.musicplayer.models.Track
 object Playlist {
     private const val TAG = "Playlist"
 
-    lateinit var tracks: List<Track>
+    var tracks = mutableListOf<Track>()
 
     val currentTrack: Track?
         get() {
@@ -22,11 +22,16 @@ object Playlist {
 
     var trackIndex = 0
 
-    val size: Int
-        get() = tracks.size
-
     fun setup(context: Context) {
-        tracks = getAudioFilesFromDevice(context)
+        tracks.addAll(getAudioFilesFromDevice(context))
+    }
+
+    fun next() {
+        if (trackIndex > tracks.size) {
+            trackIndex = 0
+        } else {
+            trackIndex++
+        }
     }
 
     fun getAudioFilesFromDevice(context: Context): List<Track> {
@@ -50,19 +55,6 @@ object Playlist {
                     artist = it.getString(3),
                     duration = it.getInt(4)
                 )
-
-                val albumCursor = context.contentResolver.query(
-                    MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
-                    arrayOf(MediaStore.Audio.Albums._ID, MediaStore.Audio.Albums.ALBUM_ART),
-                    MediaStore.Audio.Albums._ID + "=?", arrayOf(it.getString(5)), null)
-
-                if (albumCursor!!.moveToFirst()) {
-                    val path = albumCursor.getString(1)
-                    Log.d(TAG, "path = $path")
-                }
-
-                albumCursor.close()
-
                 fileList.add(audioFile)
             }
             cursor.close()

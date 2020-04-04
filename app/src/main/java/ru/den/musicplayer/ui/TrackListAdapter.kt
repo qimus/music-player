@@ -50,11 +50,11 @@ class TrackListAdapter(
         private var isPlaying = false
 
         init {
-            itemView.play.setOnClickListener(View.OnClickListener {
+            itemView.setOnClickListener(View.OnClickListener {
                 if (isPlaying) {
-                    onSelectListener.pauseTrack(itemIndex)
+                    onSelectListener.onPauseTrack(itemIndex)
                 } else {
-                    onSelectListener.playTrack(itemIndex)
+                    onSelectListener.onPlayTrack(itemIndex)
                 }
             })
         }
@@ -77,7 +77,7 @@ class TrackListAdapter(
     }
 
     interface OnTrackListener {
-        fun playTrack(trackId: Int)
-        fun pauseTrack(trackId: Int)
+        fun onPlayTrack(trackId: Int)
+        fun onPauseTrack(trackId: Int)
     }
 }

@@ -4,9 +4,9 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
-import android.media.session.PlaybackState
 import android.os.Binder
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -16,7 +16,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.media.session.MediaButtonReceiver
 import ru.den.musicplayer.models.Track
-import ru.den.musicplayer.ui.MainActivity
+import ru.den.musicplayer.ui.TrackListActivity
 import ru.den.musicplayer.utils.Playlist
 
 class MediaPlayerService : Service() {
@@ -30,7 +30,9 @@ class MediaPlayerService : Service() {
         private const val STOP = "ru.den.musicplayer.STOP"
         private const val PAUSE = "ru.den.musicplayer.PAUSE"
 
-        fun play(context: Context) {
+        const val EXTRA_TRACK_ID = "TRACK_ID"
+
+        fun startService(context: Context) {
             val intent = Intent(context, MediaPlayerService::class.java)
             context.startService(intent)
         }
@@ -62,8 +64,12 @@ class MediaPlayerService : Service() {
                 mediaSession.setMetadata(metadata)
                 mediaSession.isActive = true
 
-                val playbackState = stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING,
-                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f).build()
+                val playbackState = stateBuilder
+                    .setState(PlaybackStateCompat.STATE_PLAYING,
+                        0, 1f)
+                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
+                    .build()
+
                 mediaSession.setPlaybackState(playbackState)
 
                 if (player != null && lastTrack != currentTrack) {
@@ -74,21 +80,29 @@ class MediaPlayerService : Service() {
 
                 if (player == null) {
                     player = MediaPlayer()
-                    player!!.setDataSource(applicationContext, currentTrack.getUri())
-                    player!!.prepare()
+                    player?.setDataSource(applicationContext, currentTrack.getUri())
+                    player?.setOnPreparedListener {
+                        it.start()
+                    }
+                    player?.prepareAsync()
+                    player?.setOnCompletionListener {
+                        Playlist.next()
+                        this.onPlay()
+                    }
                     lastTrack = currentTrack
+                } else {
+                    player?.start()
                 }
-
-                player!!.start()
             }
         }
 
         override fun onPause() {
             player?.pause()
 
-            val playbackState = stateBuilder.setState(
-                PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f
-            ).build()
+            val playbackState = stateBuilder
+                .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
+                .build()
 
             mediaSession.setPlaybackState(playbackState)
         }
@@ -101,9 +115,11 @@ class MediaPlayerService : Service() {
             player = null
 
             mediaSession.isActive = false
-            val playbackState = stateBuilder.setState(
-                PlaybackStateCompat.STATE_STOPPED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f
-            ).build()
+            val playbackState = stateBuilder
+                .setState(PlaybackStateCompat.STATE_STOPPED,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
+                .build()
 
             mediaSession.setPlaybackState(playbackState)
         }
@@ -122,10 +138,9 @@ class MediaPlayerService : Service() {
     override fun onCreate() {
         super.onCreate()
 
-        Log.d(TAG, "onCreate")
         mediaSession = MediaSessionCompat(this, "MediaPlayer")
         mediaSession.setCallback(mediaSessionCallback)
-        val activityIntent = Intent(applicationContext, MainActivity::class.java)
+        val activityIntent = Intent(applicationContext, TrackListActivity::class.java)
         mediaSession.setSessionActivity(
             PendingIntent.getActivity(applicationContext, 0, activityIntent, 0)
         )
@@ -170,25 +185,6 @@ class MediaPlayerService : Service() {
         MediaButtonReceiver.handleIntent(mediaSession, intent)
         return super.onStartCommand(intent, flags, startId)
     }
-//
-//    private fun stopMusic() {
-//        player?.let {
-//            it.stop()
-//            it.release()
-//        }
-//        player = null
-//    }
-//
-//    private fun playMusic() {
-//        if (player != null) {
-//            stopMusic()
-//        }
-//
-//        player = MediaPlayer()
-//        player!!.setDataSource(applicationContext, track!!.getUri(applicationContext))
-//        player!!.prepare()
-//        player!!.start()
-//    }
 
     override fun onDestroy() {
         super.onDestroy()
