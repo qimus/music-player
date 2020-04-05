@@ -2,10 +2,13 @@ package ru.den.musicplayer.utils
 
 import android.content.Context
 import android.provider.MediaStore
+import org.koin.core.KoinComponent
 import ru.den.musicplayer.models.Track
 
-object Playlist {
-    private const val TAG = "Playlist"
+class Playlist(private val context: Context) : KoinComponent {
+    companion object {
+        private const val TAG = "Playlist"
+    }
 
     var tracks = mutableListOf<Track>()
 
@@ -16,7 +19,7 @@ object Playlist {
 
     var trackIndex = 0
 
-    fun setup(context: Context) {
+    init {
         tracks.addAll(getAudioFilesFromDevice(context))
     }
 
