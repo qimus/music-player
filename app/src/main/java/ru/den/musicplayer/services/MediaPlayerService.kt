@@ -11,13 +11,13 @@ import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.media.session.MediaButtonReceiver
 import ru.den.musicplayer.models.Track
 import ru.den.musicplayer.ui.TrackListActivity
 import ru.den.musicplayer.utils.Playlist
+import java.util.*
 
 class MediaPlayerService : Service() {
     companion object {
@@ -49,8 +49,29 @@ class MediaPlayerService : Service() {
                     PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
         )
 
+    private var timer: Timer? = null
+
     private val mediaSessionCallback = object : MediaSessionCompat.Callback() {
         private lateinit var lastTrack: Track
+
+        fun startTimer() {
+            stopTimer()
+
+            timer = Timer()
+            timer!!.schedule(object : TimerTask() {
+                override fun run() {
+                    val playbackState = stateBuilder
+                        .setState(PlaybackStateCompat.STATE_PLAYING, player!!.currentPosition.toLong(), 1f)
+                        .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
+                        .build()
+                    mediaSession.setPlaybackState(playbackState)
+                }
+            }, 0, 1000)
+        }
+
+        fun stopTimer() {
+            timer?.cancel()
+        }
 
         override fun onPlay() {
             val currentTrack = Playlist.currentTrack
@@ -64,19 +85,15 @@ class MediaPlayerService : Service() {
                 mediaSession.setMetadata(metadata)
                 mediaSession.isActive = true
 
+                if (player != null && lastTrack != currentTrack) {
+                    onStop()
+                }
+
                 val playbackState = stateBuilder
-                    .setState(PlaybackStateCompat.STATE_PLAYING,
-                        0, 1f)
+                    .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
                     .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
                     .build()
-
                 mediaSession.setPlaybackState(playbackState)
-
-                if (player != null && lastTrack != currentTrack) {
-                    player?.stop()
-                    player?.release()
-                    player = null
-                }
 
                 if (player == null) {
                     player = MediaPlayer()
@@ -93,11 +110,14 @@ class MediaPlayerService : Service() {
                 } else {
                     player?.start()
                 }
+
+                startTimer()
             }
         }
 
         override fun onPause() {
             player?.pause()
+            stopTimer()
 
             val playbackState = stateBuilder
                 .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
@@ -122,6 +142,42 @@ class MediaPlayerService : Service() {
                 .build()
 
             mediaSession.setPlaybackState(playbackState)
+        }
+
+        override fun onSkipToNext() {
+            val playbackState = stateBuilder
+                .setState(
+                    PlaybackStateCompat.STATE_SKIPPING_TO_NEXT,
+                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+
+            onStop()
+            Playlist.next()
+            onPlay()
+        }
+
+        override fun onSkipToPrevious() {
+            val playbackState = stateBuilder
+                .setState(
+                    PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
+                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, Playlist.trackIndex) })
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+
+            onStop()
+            Playlist.prev()
+            onPlay()
+        }
+
+        override fun onSeekTo(pos: Long) {
+            player?.seekTo(pos.toInt())
         }
     }
 
@@ -190,5 +246,7 @@ class MediaPlayerService : Service() {
         super.onDestroy()
         stopSelf()
         stopForeground(true)
+        timer?.cancel()
+        timer = null
     }
 }

@@ -1,13 +1,7 @@
 package ru.den.musicplayer.utils
 
 import android.content.Context
-import android.graphics.BitmapFactory
-import android.graphics.drawable.Drawable
-import android.media.ThumbnailUtils
-import android.net.Uri
 import android.provider.MediaStore
-import android.util.Log
-import android.util.Size
 import ru.den.musicplayer.models.Track
 
 object Playlist {
@@ -27,10 +21,18 @@ object Playlist {
     }
 
     fun next() {
-        if (trackIndex > tracks.size) {
+        if (trackIndex >= tracks.size - 1) {
             trackIndex = 0
         } else {
             trackIndex++
+        }
+    }
+
+    fun prev() {
+        trackIndex = if (trackIndex <= 0) {
+            0
+        } else {
+            trackIndex - 1
         }
     }
 

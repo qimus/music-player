@@ -14,21 +14,23 @@ data class Track(
     var artist: String? = null,
     var duration: Int? = null
 ) : Serializable {
+    companion object {
+        fun formatTrackTime(time: Int): String {
+            val inSeconds = time / 1000
+            val minutes = inSeconds / 60
+            var seconds = inSeconds % 60
+
+            return "$minutes:${seconds.toString().padStart(2,'0')}"
+        }
+    }
+
     fun getUri(): Uri {
         return Uri.withAppendedPath(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, "" + id)
     }
 
     fun getFormattedDuration(): String {
         duration?.let {
-            val inSeconds = it / 1000
-            val minutes = inSeconds / 60
-            var seconds = inSeconds % 60
-
-            if (minutes == 0 && seconds == 0) {
-                seconds = 1
-            }
-
-            return "$minutes:${seconds.toString().padStart(2,'0')}"
+            return formatTrackTime(it)
         }
 
         return ""

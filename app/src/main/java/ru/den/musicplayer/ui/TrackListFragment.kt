@@ -1,7 +1,6 @@
 package ru.den.musicplayer.ui
 
 import android.os.Bundle
-import android.support.v4.media.session.MediaControllerCompat
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -21,7 +20,7 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener, MediaPla
 
     interface Player {
         fun play(trackId: Int)
-        fun pause(trackId: Int)
+        fun pause()
     }
 
     companion object {
@@ -55,19 +54,16 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener, MediaPla
         }
     }
 
-    override fun onPlayTrack(trackId: Int) {
+    override fun onTrackSelected(trackId: Int) {
         (activity as Player).play(trackId)
+        audioFilesAdapter.setActiveTrackIndex(trackId)
     }
 
-    override fun onPauseTrack(trackId: Int) {
-        (activity as Player).pause(trackId)
+    override fun markAsPlaying(trackId: Int) {
+        audioFilesAdapter.setActiveTrackIndex(trackId)
     }
 
-    override fun play(trackId: Int) {
-        audioFilesAdapter.setPlayingTrackIndex(trackId)
-    }
-
-    override fun pause(trackId: Int) {
-        audioFilesAdapter.setPlayingTrackIndex(-1)
+    override fun pause() {
+        audioFilesAdapter.setActiveTrackIndex(-1)
     }
 }

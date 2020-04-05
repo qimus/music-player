@@ -1,5 +1,6 @@
 package ru.den.musicplayer.ui
 
+import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -9,7 +10,7 @@ import ru.den.musicplayer.inflate
 import ru.den.musicplayer.models.Track
 
 class TrackListAdapter(
-    private var items: List<Track>,
+    private var tracks: List<Track>,
     private var onSelectListener: OnTrackListener) :
     RecyclerView.Adapter<TrackListAdapter.TrackListViewHolder>()
 {
@@ -23,14 +24,14 @@ class TrackListAdapter(
         return TrackListViewHolder(parent.inflate(R.layout.track_item, false))
     }
 
-    override fun getItemCount() = items.size
+    override fun getItemCount() = tracks.size
 
     override fun onBindViewHolder(holder: TrackListViewHolder, position: Int) {
-        val audioFile = items[position]
-        holder.bind(audioFile, position, position == playingTrackIndex)
+        val track = tracks[position]
+        holder.bind(track, position, position == playingTrackIndex)
     }
 
-    fun setPlayingTrackIndex(ind: Int) {
+    fun setActiveTrackIndex(ind: Int) {
         val previousId = playingTrackIndex
         playingTrackIndex = ind
         notifyItemChanged(ind)
@@ -40,44 +41,40 @@ class TrackListAdapter(
     }
 
     fun updateItems(items: List<Track>) {
-        this.items = items;
+        this.tracks = items;
         notifyDataSetChanged()
     }
 
     inner class TrackListViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private lateinit var track: Track
-        private var itemIndex: Int = 0
-        private var isPlaying = false
+        private var trackInd: Int = 0
+        private var isActive = false
 
         init {
-            itemView.setOnClickListener(View.OnClickListener {
-                if (isPlaying) {
-                    onSelectListener.onPauseTrack(itemIndex)
-                } else {
-                    onSelectListener.onPlayTrack(itemIndex)
-                }
-            })
+            itemView.setOnClickListener {
+                onSelectListener.onTrackSelected(trackInd)
+            }
         }
 
-        fun bind(track: Track, position: Int, isPlaying: Boolean) {
+        fun bind(track: Track, trackInd: Int, isActive: Boolean) {
             this.track = track
-            itemIndex = position
+            this.trackInd = trackInd
+            this.isActive = isActive
             itemView.name.text = track.name
             itemView.album.text = track.artist
             itemView.duration.text = track.getFormattedDuration()
+            itemView.picture.setImageResource(R.drawable.ic_music_note)
 
-            this.isPlaying = isPlaying
-
-            if (isPlaying) {
-                itemView.play.setImageResource(android.R.drawable.ic_media_pause)
+            val resources = itemView.resources
+            if (isActive) {
+                itemView.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
             } else {
-                itemView.play.setImageResource(android.R.drawable.ic_media_play)
+                itemView.setBackgroundColor(resources.getColor(android.R.color.white))
             }
         }
     }
 
     interface OnTrackListener {
-        fun onPlayTrack(trackId: Int)
-        fun onPauseTrack(trackId: Int)
+        fun onTrackSelected(trackId: Int)
     }
 }

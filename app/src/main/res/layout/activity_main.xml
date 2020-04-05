@@ -11,7 +11,7 @@
     <FrameLayout
         android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="match_parent"
         android:elevation="2dp"
         app:layout_constraintBottom_toBottomOf="@id/miniPlayer"
         app:layout_constraintEnd_toEndOf="parent"
@@ -24,54 +24,78 @@
         android:id="@+id/miniPlayer"
         android:background="@drawable/bg_bottom_player"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="1dp"
         android:visibility="visible"
-        tools:visibility="visible"
+        tools:layout_height="60dp"
         android:elevation="6dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
+            android:id="@+id/prev"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_bottom_prev"
+            android:layout_marginStart="6dp"
+            android:layout_centerVertical="true" />
+
+        <ImageView
             android:id="@+id/musicAction"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentStart="true"
+            android:layout_marginStart="10dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_toEndOf="@id/prev"
             android:layout_centerVertical="true"
-            android:layout_marginStart="16dp"
-            android:src="@drawable/ic_play_circle" />
+            android:src="@drawable/ic_bottom_play" />
 
         <ImageView
             android:id="@+id/next"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:src="@drawable/ic_skip_next"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="10dp"
+            android:src="@drawable/ic_bottom_next"
             android:layout_centerVertical="true"
-            android:layout_toRightOf="@id/musicAction"
-            android:layout_marginStart="10dp"/>
+            android:layout_toEndOf="@id/musicAction"/>
 
         <TextView
             android:id="@+id/trackTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Название песни"
-            style="@style/TrackItemTitle"
-            android:layout_toRightOf="@id/next"
+            android:textColor="#fff"
+            android:layout_toEndOf="@id/next"
             android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:lines="1"
             android:gravity="center"/>
 
-        <ProgressBar
+        <androidx.appcompat.widget.AppCompatSeekBar
             android:id="@+id/progress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:progressTint="@android:color/holo_red_dark"
+            android:progressBackgroundTint="@android:color/white"
+            android:thumbTint="@android:color/holo_red_dark"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            android:progressTint="@android:color/black"
-            android:progressBackgroundTint="@android:color/darker_gray"
             android:progress="10"
-            android:layout_toRightOf="@id/next"
-            android:layout_below="@id/trackTitle"/>
+            android:layout_marginStart="6dp"
+            android:layout_toEndOf="@id/next"
+            android:layout_centerVertical="true"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/progress"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="14dp">
+            <TextView
+                android:id="@+id/elapsedTime"
+                style="@style/TrackItemAlbum"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00/0:00" />
+        </LinearLayout>
 
     </RelativeLayout>
 
