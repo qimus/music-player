@@ -18,5 +18,19 @@
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">#545663</item>
     </style>
+    
+    <style name="PlayerTrackTitle">
+        <item name="android:textColor">#0F1E36</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+        <item name="fontWeight">500</item>
+    </style>
+
+    <style name="PlayerTrackAlbum">
+        <item name="android:textColor">#0F1E36</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:lineSpacingExtra">0dp</item>
+        <item name="alpha">0.48</item>
+    </style>
 
 </resources>

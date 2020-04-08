@@ -1,27 +1,18 @@
 package ru.den.musicplayer.ui
 
 import android.animation.ValueAnimator
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
-import android.support.v4.media.session.MediaControllerCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
 import android.widget.SeekBar
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.fragment_track_list.*
-import kotlinx.android.synthetic.main.fragment_track_list.elapsedTime
-import kotlinx.android.synthetic.main.fragment_track_list.progress
 import org.koin.android.ext.android.inject
-
 import ru.den.musicplayer.R
 import ru.den.musicplayer.models.Track
 import ru.den.musicplayer.services.MediaPlayerService
@@ -32,10 +23,12 @@ import ru.den.musicplayer.utils.Playlist
  * Use the [TrackListFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
+class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener,
+    MediaPlayerCallbacks.Holder {
 
     companion object {
         private const val TAG = "TrackListFragment"
+
         @JvmStatic
         fun newInstance() = TrackListFragment()
         private var bottomPlayerIsVisible = false
@@ -43,56 +36,39 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
     private val playlist: Playlist by inject()
     private val audioFilesAdapter = TrackListAdapter(mutableListOf(), this)
-    private var mediaController: MediaControllerCompat? = null
-    private var lastState: PlaybackStateCompat? = null
-    private val mediaControllerCallback = object : MediaControllerCompat.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-            if (state == null || activity == null) {
-                return
-            }
+    private lateinit var mediaPlayer: MediaPlayer
 
-            updateMiniPlayerAction(state)
-
-            when (state.state) {
-                PlaybackStateCompat.STATE_PLAYING -> {
-                    val trackId = state.extras?.getInt("TRACK_ID") ?: -1
-                    if (trackId > -1 && lastState?.state != state.state) {
-                        markAsPlaying(trackId)
-                    }
-                    progress.max = playlist.currentTrack?.duration ?: 0
-                    progress.progress = state.position.toInt()
-
-                    elapsedTime.text = "${Track.formatTrackTime(progress.progress)}/${Track.formatTrackTime(progress.max)}"
-
-                    Log.d(TAG, "max: ${playlist.currentTrack?.duration}, progress: ${state.position}")
-                }
-                PlaybackStateCompat.STATE_STOPPED -> {
-                    Log.d(TAG, "stopped")
-                }
-                PlaybackStateCompat.STATE_PAUSED -> {
-                    Log.d(TAG, "paused")
-                }
-            }
-
-            lastState = state
-        }
-    }
-
-    private var serviceConnection = object : ServiceConnection {
-        override fun onServiceDisconnected(name: ComponentName?) {
-            mediaController?.unregisterCallback(mediaControllerCallback)
+    private var mediaCallbacks = object : MediaPlayerCallbacks {
+        override fun onStartPlay() {
+            updateMiniPlayerAction()
         }
 
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val playerServiceBinder = service as MediaPlayerService.PlayerServiceBinder
-            try {
-                mediaController = MediaControllerCompat(context,
-                    playerServiceBinder.getMediaSessionToken())
+        override fun onPause() {
+            updateMiniPlayerAction()
+        }
 
-                mediaController!!.registerCallback(mediaControllerCallback)
-            } catch (e: Exception) {
-                e.printStackTrace()
+        override fun onPlaying(pos: Int) {
+            playlist.currentTrack?.let {
+                progressBar?.max = it.duration ?: 0
+                progressBar?.progress = pos
+
+                if (elapsedTime != null) {
+                    elapsedTime.text =
+                        "${Track.formatTrackTime(progressBar.progress)}/${Track.formatTrackTime(progressBar.max)}"
+                }
             }
+        }
+
+        override fun onStop() {
+            updateMiniPlayerAction()
+        }
+
+        override fun onNextTrack() {
+
+        }
+
+        override fun onPrevTrack() {
+
         }
     }
 
@@ -101,7 +77,6 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         context?.let {
             MediaPlayerService.startService(it)
         }
-        bindMediaPlayerService()
         configureBottomMediaPlayer()
         if (bottomPlayerIsVisible) {
             showBottomMediaPlayerControl()
@@ -111,49 +86,42 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
     override fun onStop() {
         super.onStop()
         Log.d(TAG, "onStop")
-        unbindMediaPlayerService()
     }
 
-    private fun bindMediaPlayerService() {
-        activity?.bindService(
-            Intent(context, MediaPlayerService::class.java),
-            serviceConnection,
-            Context.BIND_AUTO_CREATE
-        )
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        mediaPlayer = context as MediaPlayer
     }
 
-    private fun unbindMediaPlayerService() {
-        activity?.unbindService(serviceConnection)
-    }
-
-    private fun updateMiniPlayerAction(state: PlaybackStateCompat) {
-        if (state.state == PlaybackStateCompat.STATE_PLAYING) {
-            musicAction.setImageResource(R.drawable.ic_bottom_pause)
+    private fun updateMiniPlayerAction() {
+        if (playlist.isPlaying) {
+            musicAction?.setImageResource(R.drawable.ic_bottom_pause)
+            audioFilesAdapter.setActiveTrackIndex(playlist.trackIndex)
         } else {
-            musicAction.setImageResource(R.drawable.ic_bottom_play)
+            musicAction?.setImageResource(R.drawable.ic_bottom_play)
+            audioFilesAdapter.setActiveTrackIndex(-1)
         }
-        trackTitle.text = playlist.currentTrack?.name
+        trackTitle?.text = playlist.currentTrack?.name
     }
 
     private fun configureBottomMediaPlayer() {
         musicAction.setOnClickListener {
-            val curState = lastState?.state ?: 0
-            if (curState == PlaybackStateCompat.STATE_PLAYING) {
+            if (playlist.isPlaying) {
                 pause()
             } else {
-                play(playlist.trackIndex)
+                play()
             }
         }
 
         next.setOnClickListener {
-            mediaController?.transportControls?.skipToNext()
+            mediaPlayer.nextTrack()
         }
 
         prev.setOnClickListener {
-            mediaController?.transportControls?.skipToPrevious()
+            mediaPlayer.prevTrack()
         }
 
-        progress.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        progressBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
 
             }
@@ -164,7 +132,7 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.progress?.let {
-                    mediaController?.transportControls?.seekTo(it.toLong())
+                    mediaPlayer.seekTo(it)
                 }
             }
         })
@@ -204,24 +172,32 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
             trackListRecyclerView.adapter = audioFilesAdapter
             trackListRecyclerView.layoutManager = LinearLayoutManager(context)
         }
+
+        miniPlayer.setOnClickListener {
+            activity?.supportFragmentManager?.run {
+                val fragment = DetailFragment.newInstance()
+                beginTransaction().replace(R.id.fragmentContainer, fragment).addToBackStack(null)
+                    .commit()
+            }
+        }
     }
 
     override fun onTrackSelected(trackId: Int) {
-        play(trackId)
-    }
-
-    private fun markAsPlaying(trackId: Int) {
-        audioFilesAdapter.setActiveTrackIndex(trackId)
-    }
-
-    private fun play(trackId: Int) {
         playlist.trackIndex = trackId
-        mediaController?.transportControls?.play()
+        play()
+    }
+
+    private fun play() {
+        mediaPlayer.play()
         showBottomMediaPlayerControl()
     }
 
     private fun pause() {
         audioFilesAdapter.setActiveTrackIndex(-1)
-        mediaController?.transportControls?.pause()
+        mediaPlayer.pause()
+    }
+
+    override fun getMediaPlayerCallbacks(): MediaPlayerCallbacks {
+        return mediaCallbacks
     }
 }

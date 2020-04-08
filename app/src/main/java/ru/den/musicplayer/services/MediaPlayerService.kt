@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.media.session.MediaButtonReceiver
@@ -18,6 +19,7 @@ import org.koin.android.ext.android.inject
 import ru.den.musicplayer.models.Track
 import ru.den.musicplayer.ui.TrackListActivity
 import ru.den.musicplayer.utils.Playlist
+import java.lang.Exception
 import java.util.*
 
 class MediaPlayerService : Service() {
@@ -63,11 +65,18 @@ class MediaPlayerService : Service() {
             timer = Timer()
             timer!!.schedule(object : TimerTask() {
                 override fun run() {
-                    val playbackState = stateBuilder
-                        .setState(PlaybackStateCompat.STATE_PLAYING, player!!.currentPosition.toLong(), 1f)
-                        .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
-                        .build()
-                    mediaSession.setPlaybackState(playbackState)
+                    try {
+                        player?.let {
+                            val playbackState = stateBuilder
+                                .setState(PlaybackStateCompat.STATE_PLAYING, it.currentPosition.toLong(), 1f)
+                                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
+                                .build()
+                            mediaSession.setPlaybackState(playbackState)
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Ошибка при отправке тек позиции трека: ${e.message}")
+                        e.printStackTrace()
+                    }
                 }
             }, 0, 1000)
         }
@@ -113,7 +122,7 @@ class MediaPlayerService : Service() {
                 } else {
                     player?.start()
                 }
-
+                playlist.isPlaying = true
                 startTimer()
             }
         }
@@ -121,6 +130,7 @@ class MediaPlayerService : Service() {
         override fun onPause() {
             player?.pause()
             stopTimer()
+            playlist.isPlaying = false
 
             val playbackState = stateBuilder
                 .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
@@ -135,6 +145,7 @@ class MediaPlayerService : Service() {
                 it.stop()
                 it.release()
             }
+            playlist.isPlaying = false
             player = null
 
             mediaSession.isActive = false

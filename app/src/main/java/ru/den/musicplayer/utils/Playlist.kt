@@ -10,6 +10,7 @@ class Playlist(private val context: Context) : KoinComponent {
         private const val TAG = "Playlist"
     }
 
+    var isPlaying = false
     var tracks = mutableListOf<Track>()
 
     val currentTrack: Track?

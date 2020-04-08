@@ -71,7 +71,7 @@
             android:gravity="center"/>
 
         <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/progress"
+            android:id="@+id/progressBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:progressTint="@android:color/holo_red_dark"
@@ -86,7 +86,7 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/progress"
+            android:layout_below="@id/progressBar"
             android:layout_alignParentEnd="true"
             android:layout_marginEnd="14dp">
             <TextView
