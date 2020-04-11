@@ -67,6 +67,7 @@ class MediaPlayerService : Service() {
                 override fun run() {
                     try {
                         player?.let {
+                            playlist.currentTrackProgress = it.currentPosition
                             val playbackState = stateBuilder
                                 .setState(PlaybackStateCompat.STATE_PLAYING, it.currentPosition.toLong(), 1f)
                                 .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })

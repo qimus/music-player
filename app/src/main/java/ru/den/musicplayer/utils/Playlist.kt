@@ -12,6 +12,7 @@ class Playlist(private val context: Context) : KoinComponent {
 
     var isPlaying = false
     var tracks = mutableListOf<Track>()
+    var currentTrackProgress: Int = 0
 
     val currentTrack: Track?
         get() {

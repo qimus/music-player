@@ -15,7 +15,6 @@ import kotlinx.android.synthetic.main.fragment_track_list.*
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
 import ru.den.musicplayer.models.Track
-import ru.den.musicplayer.services.MediaPlayerService
 import ru.den.musicplayer.utils.Playlist
 
 /**
@@ -23,8 +22,7 @@ import ru.den.musicplayer.utils.Playlist
  * Use the [TrackListFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener,
-    MediaPlayerCallbacks.Holder {
+class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
     companion object {
         private const val TAG = "TrackListFragment"
@@ -47,15 +45,9 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener,
             updateMiniPlayerAction()
         }
 
-        override fun onPlaying(pos: Int) {
+        override fun onPlaying(progress: Int) {
             playlist.currentTrack?.let {
-                progressBar?.max = it.duration ?: 0
-                progressBar?.progress = pos
-
-                if (elapsedTime != null) {
-                    elapsedTime.text =
-                        "${Track.formatTrackTime(progressBar.progress)}/${Track.formatTrackTime(progressBar.max)}"
-                }
+                updateProgress(progress)
             }
         }
 
@@ -74,18 +66,24 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener,
 
     override fun onStart() {
         super.onStart()
-        context?.let {
-            MediaPlayerService.startService(it)
-        }
         configureBottomMediaPlayer()
+        mediaPlayer.registerMediaPlayerCallbacks(mediaCallbacks)
         if (bottomPlayerIsVisible) {
             showBottomMediaPlayerControl()
+            updateProgress(playlist.currentTrackProgress)
+            updateMiniPlayerAction()
         }
+    }
+
+    private fun updateProgress(progress: Int, max: Int = playlist.currentTrack?.duration ?: 100) {
+        progressBar?.max = max
+        progressBar?.progress = progress
+        elapsedTime?.text = "${Track.formatTrackTime(progressBar.progress)}/${Track.formatTrackTime(progressBar.max)}"
     }
 
     override fun onStop() {
         super.onStop()
-        Log.d(TAG, "onStop")
+        mediaPlayer.unregisterMediaPlayerCallbacks(mediaCallbacks)
     }
 
     override fun onAttach(context: Context) {
@@ -195,9 +193,5 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener,
     private fun pause() {
         audioFilesAdapter.setActiveTrackIndex(-1)
         mediaPlayer.pause()
-    }
-
-    override fun getMediaPlayerCallbacks(): MediaPlayerCallbacks {
-        return mediaCallbacks
     }
 }

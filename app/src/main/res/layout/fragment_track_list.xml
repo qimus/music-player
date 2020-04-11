@@ -20,7 +20,7 @@
         android:id="@+id/miniPlayer"
         android:background="@drawable/bg_bottom_player"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
+        android:layout_height="0dp"
         android:visibility="visible"
         tools:layout_height="60dp"
         android:elevation="6dp"
@@ -74,7 +74,7 @@
             android:progressBackgroundTint="@android:color/white"
             android:thumbTint="@android:color/holo_red_dark"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            android:progress="10"
+            android:progress="0"
             android:layout_marginStart="6dp"
             android:layout_toEndOf="@id/next"
             android:layout_centerVertical="true"/>

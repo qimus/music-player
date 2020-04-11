@@ -14,7 +14,6 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
-import androidx.fragment.app.Fragment
 import ru.den.musicplayer.R
 import ru.den.musicplayer.services.MediaPlayerService
 
@@ -25,20 +24,65 @@ interface MediaPlayer {
     fun prevTrack()
     fun stop()
     fun seekTo(pos: Int)
+    fun registerMediaPlayerCallbacks(mediaPlayerCallbacks: MediaPlayerCallbacks)
+    fun unregisterMediaPlayerCallbacks(mediaPlayerCallbacks: MediaPlayerCallbacks)
 }
 
-
 interface MediaPlayerCallbacks {
-    interface Holder {
-        fun getMediaPlayerCallbacks() : MediaPlayerCallbacks
-    }
-
     fun onStartPlay()
     fun onPause()
     fun onPlaying(progress: Int)
     fun onStop()
     fun onNextTrack()
     fun onPrevTrack()
+}
+
+class MediaPlayerCallbacksComposite : MediaPlayerCallbacks {
+    private val mediaPlayerCallbacks = mutableSetOf<MediaPlayerCallbacks>()
+
+    fun addMediaPlayerCallbacks(callbacks: MediaPlayerCallbacks) {
+        mediaPlayerCallbacks.add(callbacks)
+    }
+
+    fun removeMediaPlayerCallbacks(callbacks: MediaPlayerCallbacks) {
+        mediaPlayerCallbacks.remove(callbacks)
+    }
+
+    override fun onStartPlay() {
+        mediaPlayerCallbacks.forEach {
+            it.onStartPlay()
+        }
+    }
+
+    override fun onPause() {
+        mediaPlayerCallbacks.forEach {
+            it.onPause()
+        }
+    }
+
+    override fun onPlaying(progress: Int) {
+        mediaPlayerCallbacks.forEach {
+            it.onPlaying(progress)
+        }
+    }
+
+    override fun onStop() {
+        mediaPlayerCallbacks.forEach {
+            it.onStop()
+        }
+    }
+
+    override fun onNextTrack() {
+        mediaPlayerCallbacks.forEach {
+            it.onNextTrack()
+        }
+    }
+
+    override fun onPrevTrack() {
+        mediaPlayerCallbacks.forEach {
+            it.onPrevTrack()
+        }
+    }
 }
 
 class TrackListActivity : AppCompatActivity(), MediaPlayer {
@@ -52,8 +96,7 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
         private const val PERMISSION_CODE = 1
     }
 
-    private var mediaPlayerCallbacks: MediaPlayerCallbacks? = null
-
+    private var mediaPlayerCallbacks = MediaPlayerCallbacksComposite()
     private var mediaController: MediaControllerCompat? = null
     private var lastState: PlaybackStateCompat? = null
     private val mediaControllerCallback = object : MediaControllerCompat.Callback() {
@@ -66,15 +109,15 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
                 PlaybackStateCompat.STATE_PLAYING -> {
                     val trackId = state.extras?.getInt("TRACK_ID") ?: -1
                     if (trackId > -1 && lastState?.state != state.state) {
-                        mediaPlayerCallbacks?.onStartPlay()
+                        mediaPlayerCallbacks.onStartPlay()
                     }
-                    mediaPlayerCallbacks?.onPlaying(state.position.toInt())
+                    mediaPlayerCallbacks.onPlaying(state.position.toInt())
                 }
                 PlaybackStateCompat.STATE_STOPPED -> {
-                    mediaPlayerCallbacks?.onStop()
+                    mediaPlayerCallbacks.onStop()
                 }
                 PlaybackStateCompat.STATE_PAUSED -> {
-                    mediaPlayerCallbacks?.onPause()
+                    mediaPlayerCallbacks.onPause()
                 }
             }
 
@@ -110,6 +153,14 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
 
         bindFragment()
         bindMediaPlayerService()
+    }
+
+    override fun registerMediaPlayerCallbacks(mediaPlayerCallbacks: MediaPlayerCallbacks) {
+        this.mediaPlayerCallbacks.addMediaPlayerCallbacks(mediaPlayerCallbacks)
+    }
+
+    override fun unregisterMediaPlayerCallbacks(mediaPlayerCallbacks: MediaPlayerCallbacks) {
+        this.mediaPlayerCallbacks.removeMediaPlayerCallbacks(mediaPlayerCallbacks)
     }
 
     override fun onDestroy() {
@@ -167,13 +218,6 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
             else -> {
                 super.onRequestPermissionsResult(requestCode, permissions, grantResults)
             }
-        }
-    }
-
-    override fun onAttachFragment(fragment: Fragment) {
-        super.onAttachFragment(fragment)
-        if (fragment is MediaPlayerCallbacks.Holder) {
-            mediaPlayerCallbacks = fragment.getMediaPlayerCallbacks()
         }
     }
 
