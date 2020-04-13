@@ -11,11 +11,12 @@ import android.view.animation.LinearInterpolator
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.tabs.TabLayout
 import kotlinx.android.synthetic.main.fragment_track_list.*
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
+import ru.den.musicplayer.models.PlaylistManager
 import ru.den.musicplayer.models.Track
-import ru.den.musicplayer.utils.Playlist
 
 /**
  * A simple [Fragment] subclass.
@@ -32,7 +33,8 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         private var bottomPlayerIsVisible = false
     }
 
-    private val playlist: Playlist by inject()
+    private val playlistManager: PlaylistManager by inject()
+    private val playlist = playlistManager.currentPlaylist
     private val audioFilesAdapter = TrackListAdapter(mutableListOf(), this)
     private lateinit var mediaPlayer: MediaPlayer
 
@@ -70,8 +72,15 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         mediaPlayer.registerMediaPlayerCallbacks(mediaCallbacks)
         if (bottomPlayerIsVisible) {
             showBottomMediaPlayerControl()
-            updateProgress(playlist.currentTrackProgress)
+            updateProgress(playlist.trackProgress)
             updateMiniPlayerAction()
+        }
+        tabs.tabMode = TabLayout.MODE_SCROLLABLE
+
+        progressBar.setPadding(0, 0, 0, 0)
+
+        for (i in 0 .. 15) {
+            tabs.addTab(tabs.newTab().setText("Все песни $i"))
         }
     }
 
@@ -92,9 +101,9 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
     }
 
     private fun updateMiniPlayerAction() {
-        if (playlist.isPlaying) {
+        if (playlistManager.isPlaying) {
             musicAction?.setImageResource(R.drawable.ic_bottom_pause)
-            audioFilesAdapter.setActiveTrackIndex(playlist.trackIndex)
+            audioFilesAdapter.setActiveTrackIndex(playlist.currentTrackInd)
         } else {
             musicAction?.setImageResource(R.drawable.ic_bottom_play)
             audioFilesAdapter.setActiveTrackIndex(-1)
@@ -104,7 +113,7 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
     private fun configureBottomMediaPlayer() {
         musicAction.setOnClickListener {
-            if (playlist.isPlaying) {
+            if (playlistManager.isPlaying) {
                 pause()
             } else {
                 play()
@@ -181,7 +190,7 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
     }
 
     override fun onTrackSelected(trackId: Int) {
-        playlist.trackIndex = trackId
+        playlist.currentTrackInd = trackId
         play()
     }
 

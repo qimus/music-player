@@ -16,9 +16,10 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.media.session.MediaButtonReceiver
 import org.koin.android.ext.android.inject
+import ru.den.musicplayer.models.PlaylistManager
 import ru.den.musicplayer.models.Track
+import ru.den.musicplayer.models.playlist.Playlist
 import ru.den.musicplayer.ui.TrackListActivity
-import ru.den.musicplayer.utils.Playlist
 import java.lang.Exception
 import java.util.*
 
@@ -45,7 +46,7 @@ class MediaPlayerService : Service() {
     private var track: Track? = null
     private lateinit var mediaSession: MediaSessionCompat
 
-    private val playlist: Playlist by inject()
+    private val playlistManager: PlaylistManager by inject()
 
     private val stateBuilder: PlaybackStateCompat.Builder = PlaybackStateCompat.Builder()
         .setActions(
@@ -66,11 +67,12 @@ class MediaPlayerService : Service() {
             timer!!.schedule(object : TimerTask() {
                 override fun run() {
                     try {
+                        val playlist = playlistManager.currentPlaylist
                         player?.let {
-                            playlist.currentTrackProgress = it.currentPosition
+                            playlist.trackProgress = it.currentPosition
                             val playbackState = stateBuilder
                                 .setState(PlaybackStateCompat.STATE_PLAYING, it.currentPosition.toLong(), 1f)
-                                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
+                                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
                                 .build()
                             mediaSession.setPlaybackState(playbackState)
                         }
@@ -87,7 +89,9 @@ class MediaPlayerService : Service() {
         }
 
         override fun onPlay() {
-            val currentTrack = playlist.currentTrack
+            val playlist = playlistManager.currentPlaylist
+            val currentTrack = playlist?.currentTrack
+
             currentTrack?.let {
                 val metadata = MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTrack.name)
@@ -104,7 +108,7 @@ class MediaPlayerService : Service() {
 
                 val playbackState = stateBuilder
                     .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
-                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
+                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
                     .build()
                 mediaSession.setPlaybackState(playbackState)
 
@@ -116,14 +120,14 @@ class MediaPlayerService : Service() {
                     }
                     player?.prepareAsync()
                     player?.setOnCompletionListener {
-                        playlist.next()
+                        playlist.nextTrack()
                         this.onPlay()
                     }
                     lastTrack = currentTrack
                 } else {
                     player?.start()
                 }
-                playlist.isPlaying = true
+                playlistManager.isPlaying = true
                 startTimer()
             }
         }
@@ -131,11 +135,11 @@ class MediaPlayerService : Service() {
         override fun onPause() {
             player?.pause()
             stopTimer()
-            playlist.isPlaying = false
+            playlistManager.isPlaying = false
 
             val playbackState = stateBuilder
                 .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
-                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlistManager.currentPlaylist?.currentTrackInd ?: 0) })
                 .build()
 
             mediaSession.setPlaybackState(playbackState)
@@ -146,49 +150,54 @@ class MediaPlayerService : Service() {
                 it.stop()
                 it.release()
             }
-            playlist.isPlaying = false
+            playlistManager.isPlaying = false
             player = null
 
             mediaSession.isActive = false
             val playbackState = stateBuilder
                 .setState(PlaybackStateCompat.STATE_STOPPED,
                     PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
-                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlistManager.currentPlaylist?.currentTrackInd ?: 0) })
                 .build()
 
             mediaSession.setPlaybackState(playbackState)
         }
 
         override fun onSkipToNext() {
-            val playbackState = stateBuilder
-                .setState(
-                    PlaybackStateCompat.STATE_SKIPPING_TO_NEXT,
-                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                1f)
-                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
-                .build()
+            val playlist = playlistManager.currentPlaylist
+            playlist?.let {
+                val playbackState = stateBuilder
+                    .setState(
+                        PlaybackStateCompat.STATE_SKIPPING_TO_NEXT,
+                        player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                        1f)
+                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
+                    .build()
 
-            mediaSession.setPlaybackState(playbackState)
+                mediaSession.setPlaybackState(playbackState)
 
-            onStop()
-            playlist.next()
-            onPlay()
+                onStop()
+                playlist.nextTrack()
+                onPlay()
+            }
         }
 
         override fun onSkipToPrevious() {
-            val playbackState = stateBuilder
-                .setState(
-                    PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
-                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                    1f)
-                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.trackIndex) })
-                .build()
+            playlistManager.currentPlaylist?.let { playlist ->
+                val playbackState = stateBuilder
+                    .setState(
+                        PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
+                        player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                        1f)
+                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
+                    .build()
 
-            mediaSession.setPlaybackState(playbackState)
+                mediaSession.setPlaybackState(playbackState)
 
-            onStop()
-            playlist.prev()
-            onPlay()
+                onStop()
+                playlist.prevTrack()
+                onPlay()
+            }
         }
 
         override fun onSeekTo(pos: Long) {

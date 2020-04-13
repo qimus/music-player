@@ -16,8 +16,9 @@ import kotlinx.android.synthetic.main.fragment_player.trackTitle
 import org.koin.android.ext.android.inject
 
 import ru.den.musicplayer.R
+import ru.den.musicplayer.models.PlaylistManager
 import ru.den.musicplayer.models.Track
-import ru.den.musicplayer.utils.Playlist
+import ru.den.musicplayer.models.playlist.Playlist
 
 /**
  * A simple [Fragment] subclass.
@@ -59,7 +60,8 @@ class DetailFragment : Fragment() {
         }
     }
 
-    private val playlist: Playlist by inject()
+    private val playlistManager: PlaylistManager by inject()
+    private var playlist: Playlist = playlistManager.currentPlaylist
     private lateinit var mediaPlayer: MediaPlayer
 
     override fun onAttach(context: Context) {
@@ -101,7 +103,7 @@ class DetailFragment : Fragment() {
         bindProgressBar()
         updateProgressBar()
         mediaPlayer.registerMediaPlayerCallbacks(mediaCallbacks)
-        Log.d(TAG, "onStart ${progressBar?.progress} : ${playlist.currentTrackProgress} : ${playlist.currentTrack?.duration}")
+        Log.d(TAG, "onStart ${progressBar?.progress} : ${playlist.trackProgress} : ${playlist.currentTrack?.duration}")
     }
 
     override fun onStop() {
@@ -110,7 +112,7 @@ class DetailFragment : Fragment() {
     }
 
     private fun updatePlayControls() {
-        if (playlist.isPlaying) {
+        if (playlistManager.isPlaying) {
             play?.setImageResource(R.drawable.ic_bottom_pause)
         } else {
             play?.setImageResource(R.drawable.ic_player_play)
@@ -131,13 +133,13 @@ class DetailFragment : Fragment() {
     }
 
     private fun updateProgressBar() {
-        updateProgressBar(playlist.currentTrackProgress)
+        updateProgressBar(playlist.trackProgress)
     }
 
     private fun bindHandlers() {
         updatePlayControls()
         play.setOnClickListener {
-            if (playlist.isPlaying) {
+            if (playlistManager.isPlaying) {
                 mediaPlayer.pause()
             } else {
                 mediaPlayer.play()
