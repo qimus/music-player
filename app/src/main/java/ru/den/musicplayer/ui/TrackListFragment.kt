@@ -1,7 +1,6 @@
 package ru.den.musicplayer.ui
 
 import android.animation.ArgbEvaluator
-import android.animation.FloatEvaluator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Bundle
@@ -14,6 +13,11 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import kotlinx.android.synthetic.main.fragment_track_list.*
+import kotlinx.android.synthetic.main.fragment_track_list.next
+import kotlinx.android.synthetic.main.fragment_track_list.prev
+import kotlinx.android.synthetic.main.fragment_track_list.progressBar
+import kotlinx.android.synthetic.main.fragment_track_list.trackTitle
+import kotlinx.android.synthetic.main.media_player_fragment.*
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
 import ru.den.musicplayer.convertDpToPx
@@ -66,15 +70,14 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
             if (maxViewHeightPx - e2.y < minPlayerHeightPx || offset > maxViewHeightPx + 50) {
                 return true
             }
-            val lp = miniPlayer.layoutParams
+            val lp = miniPlayerLayout.layoutParams
             lp.height = offset.toInt()
-            miniPlayer.layoutParams = lp
-            //Log.d(TAG, "${e1.y} ${e2.y} $offset")
+            miniPlayerLayout.layoutParams = lp
             return true
         }
 
         override fun onDown(e: MotionEvent?): Boolean {
-            currentPlayerHeight = miniPlayer.layoutParams.height
+            currentPlayerHeight = miniPlayerLayout.layoutParams.height
             return true
         }
     }
@@ -133,9 +136,9 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
                 when(event.action) {
                     MotionEvent.ACTION_UP -> {
                         if (lastScrollDirection == ScrollDirection.UP) {
-                            miniPlayerRollUp(miniPlayer.layoutParams.height, maxViewHeightPx)
+                            miniPlayerRollUp(miniPlayerLayout.layoutParams.height, maxViewHeightPx)
                         } else {
-                            miniPlayerRollUp(miniPlayer.layoutParams.height, minPlayerHeightPx)
+                            miniPlayerRollUp(miniPlayerLayout.layoutParams.height, minPlayerHeightPx)
                         }
                     }
                 }
@@ -145,17 +148,26 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
         val argbEvaluator = ArgbEvaluator()
 
-        miniPlayer.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+        miniPlayerLayout.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             val scrollUpPercent = (v.layoutParams.height.toFloat() - minPlayerHeightPx) / view.height
             val backgroundColor = argbEvaluator.evaluate(scrollUpPercent, 0xFF0F1E36.toInt(), 0xFFFFFFFF.toInt()) as Int
-            playerContainer.setBackgroundColor(backgroundColor)
-            Log.d(TAG, "scrollUpPercent: $scrollUpPercent")
+            miniPlayer.setBackgroundColor(backgroundColor)
             var alpha = 1 - scrollUpPercent
             if (scrollUpPercent > 0.2) {
                 alpha -= 0.5f
             }
-            ttt.alpha = alpha
+            updateMiniPlayerVisible(alpha)
+           // miniPlayer.alpha = alpha
         }
+    }
+
+    private fun updateMiniPlayerVisible(alpha: Float) {
+        progressBar.alpha = alpha
+        prev.alpha = alpha
+        next.alpha = alpha
+        musicAction.alpha = alpha
+        trackTitle.alpha = alpha
+        elapsedTime.alpha = alpha
     }
 
     private fun miniPlayerRollUp(start: Int, end: Int) {
@@ -167,8 +179,8 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
         animator.addUpdateListener {
             val animatedValue = it.animatedValue as Int
-            miniPlayer.layoutParams.height = animatedValue
-            miniPlayer.requestLayout()
+            miniPlayerLayout.layoutParams.height = animatedValue
+            miniPlayerLayout.requestLayout()
         }
     }
 
@@ -253,18 +265,18 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
     }
 
     private fun showBottomMediaPlayerControl() {
-        val animator = ValueAnimator.ofInt(miniPlayer.layoutParams.height, 250).apply {
+        val animator = ValueAnimator.ofInt(miniPlayerLayout.layoutParams.height, 250).apply {
             duration = 300
             interpolator = LinearInterpolator()
             start()
         }
 
-        miniPlayer.visibility = View.VISIBLE
+        miniPlayerLayout.visibility = View.VISIBLE
 
         animator.addUpdateListener {
             val value = it.animatedValue as Int
-            miniPlayer.layoutParams.height = value
-            miniPlayer.requestLayout()
+            miniPlayerLayout.layoutParams.height = value
+            miniPlayerLayout.requestLayout()
         }
 
         bottomPlayerIsVisible = true
