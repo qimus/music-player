@@ -4,7 +4,6 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
@@ -12,17 +11,18 @@ import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.fragment_track_list.*
 import kotlinx.android.synthetic.main.fragment_track_list.next
 import kotlinx.android.synthetic.main.fragment_track_list.prev
 import kotlinx.android.synthetic.main.fragment_track_list.progressBar
 import kotlinx.android.synthetic.main.fragment_track_list.trackTitle
-import kotlinx.android.synthetic.main.media_player_fragment.*
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
 import ru.den.musicplayer.convertDpToPx
 import ru.den.musicplayer.models.PlaylistManager
 import ru.den.musicplayer.models.Track
+import ru.den.musicplayer.ui.adapters.AlbumPagerAdapter
 
 enum class ScrollDirection {
     UP, DOWN
@@ -33,7 +33,7 @@ enum class ScrollDirection {
  * Use the [TrackListFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
+class TrackListFragment : Fragment() {
 
     companion object {
         private const val TAG = "TrackListFragment"
@@ -45,13 +45,15 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
     }
 
     private val playlistManager: PlaylistManager by inject()
-    private val playlist = playlistManager.currentPlaylist
-    private val audioFilesAdapter = TrackListAdapter(mutableListOf(), this)
+    //private val playlist = playlistManager.currentPlaylist
+    //private val audioFilesAdapter = TrackListAdapter(mutableListOf(), this)
     private lateinit var mediaPlayerHost: MediaPlayer
     private var currentPlayerHeight = 0
     private var maxViewHeightPx = 0
     private var minPlayerHeightPx = 0
     private var lastScrollDirection: ScrollDirection = ScrollDirection.UP
+
+    private lateinit var albumPagerAdapter: AlbumPagerAdapter
 
     private var gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onScroll(
@@ -94,9 +96,9 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         }
 
         override fun onPlaying(progress: Int) {
-            playlist.currentTrack?.let {
-                updateProgress(progress)
-            }
+//            playlist.currentTrack?.let {
+//                updateProgress(progress)
+//            }
         }
 
         override fun onStop() {
@@ -120,12 +122,7 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         })
 
         context?.let {
-            val files = playlist.tracks
-            audioFilesAdapter.updateItems(files)
             minPlayerHeightPx = it.convertDpToPx(MIN_PLAYER_HEIGHT).toInt() + 50
-
-            trackListRecyclerView.adapter = audioFilesAdapter
-            trackListRecyclerView.layoutManager = LinearLayoutManager(context)
         }
 
         gestureDetector = GestureDetector(context, gestureListener)
@@ -147,7 +144,6 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         }
 
         val argbEvaluator = ArgbEvaluator()
-
         miniPlayerLayout.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             val scrollUpPercent = (v.layoutParams.height.toFloat() - minPlayerHeightPx) / view.height
             val backgroundColor = argbEvaluator.evaluate(scrollUpPercent, 0xFF0F1E36.toInt(), 0xFFFFFFFF.toInt()) as Int
@@ -157,8 +153,14 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
                 alpha -= 0.5f
             }
             updateMiniPlayerVisible(alpha)
-           // miniPlayer.alpha = alpha
         }
+
+        albumPagerAdapter = AlbumPagerAdapter(this)
+        viewPager.adapter = albumPagerAdapter
+
+        TabLayoutMediator(tabs, viewPager) { tab, position ->
+            tab.text = playlistManager.playlists[position].title
+        }.attach()
     }
 
     private fun updateMiniPlayerVisible(alpha: Float) {
@@ -191,23 +193,19 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
 
         if (bottomPlayerIsVisible) {
             showBottomMediaPlayerControl()
-            updateProgress(playlist.trackProgress)
+            //updateProgress(playlist.trackProgress)
             updateMiniPlayerAction()
         }
         tabs.tabMode = TabLayout.MODE_SCROLLABLE
 
         progressBar.setPadding(0, 0, 0, 0)
-
-        for (i in 0 .. 15) {
-            tabs.addTab(tabs.newTab().setText("Все песни $i"))
-        }
     }
 
-    private fun updateProgress(progress: Int, max: Int = playlist.currentTrack?.duration ?: 100) {
-        progressBar?.max = max
-        progressBar?.progress = progress
-        elapsedTime?.text = "${Track.formatTrackTime(progressBar.progress)}/${Track.formatTrackTime(progressBar.max)}"
-    }
+//    private fun updateProgress(progress: Int, max: Int = playlist.currentTrack?.duration ?: 100) {
+//        progressBar?.max = max
+//        progressBar?.progress = progress
+//        elapsedTime?.text = "${Track.formatTrackTime(progressBar.progress)}/${Track.formatTrackTime(progressBar.max)}"
+//    }
 
     override fun onStop() {
         super.onStop()
@@ -220,23 +218,23 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
     }
 
     private fun updateMiniPlayerAction() {
-        if (playlistManager.isPlaying) {
-            musicAction?.setImageResource(R.drawable.ic_bottom_pause)
-            audioFilesAdapter.setActiveTrackIndex(playlist.currentTrackInd)
-        } else {
-            musicAction?.setImageResource(R.drawable.ic_bottom_play)
-            audioFilesAdapter.setActiveTrackIndex(-1)
-        }
-        trackTitle?.text = playlist.currentTrack?.name
+//        if (playlistManager.isPlaying) {
+//            musicAction?.setImageResource(R.drawable.ic_bottom_pause)
+//           // audioFilesAdapter.setActiveTrackIndex(playlist.currentTrackInd)
+//        } else {
+//            musicAction?.setImageResource(R.drawable.ic_bottom_play)
+//           // audioFilesAdapter.setActiveTrackIndex(-1)
+//        }
+//        trackTitle?.text = playlist.currentTrack?.name
     }
 
     private fun configureBottomMediaPlayer() {
         musicAction.setOnClickListener {
-            if (playlistManager.isPlaying) {
-                pause()
-            } else {
-                play()
-            }
+//            if (playlistManager.isPlaying) {
+//                pause()
+//            } else {
+//                play()
+//            }
         }
 
         next.setOnClickListener {
@@ -290,18 +288,13 @@ class TrackListFragment : Fragment(), TrackListAdapter.OnTrackListener {
         return inflater.inflate(R.layout.fragment_track_list, container, false)
     }
 
-    override fun onTrackSelected(trackId: Int) {
-        playlist.currentTrackInd = trackId
-        play()
-    }
-
     private fun play() {
         mediaPlayerHost.play()
         //showBottomMediaPlayerControl()
     }
 
     private fun pause() {
-        audioFilesAdapter.setActiveTrackIndex(-1)
+       // audioFilesAdapter.setActiveTrackIndex(-1)
         mediaPlayerHost.pause()
     }
 }

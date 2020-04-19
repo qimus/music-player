@@ -15,6 +15,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import ru.den.musicplayer.R
+import ru.den.musicplayer.searcher.AlbumSearcher
 import ru.den.musicplayer.services.MediaPlayerService
 
 interface MediaPlayer {
@@ -150,6 +151,9 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
         if (!hasAllPermissions()) {
             requestPermissions()
         }
+
+        val albumSearcher = AlbumSearcher(this)
+        albumSearcher.search(null)
 
         bindFragment()
         bindMediaPlayerService()

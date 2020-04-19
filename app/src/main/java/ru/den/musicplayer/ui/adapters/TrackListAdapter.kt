@@ -1,6 +1,5 @@
-package ru.den.musicplayer.ui
+package ru.den.musicplayer.ui.adapters
 
-import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -11,7 +10,8 @@ import ru.den.musicplayer.models.Track
 
 class TrackListAdapter(
     private var tracks: List<Track>,
-    private var onSelectListener: OnTrackListener) :
+    private var onSelectListener: OnTrackListener
+) :
     RecyclerView.Adapter<TrackListAdapter.TrackListViewHolder>()
 {
     companion object {
