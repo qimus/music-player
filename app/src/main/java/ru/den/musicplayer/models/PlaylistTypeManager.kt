@@ -8,20 +8,20 @@ import ru.den.musicplayer.ui.ListFragment
 import ru.den.musicplayer.ui.TracksFragment
 import ru.den.musicplayer.ui.adapters.ListAdapter
 
-interface Playlist {
+interface PlaylistType {
     val title: String
     fun createFragment(): Fragment
 }
 
-class AllTracksPlaylist: Playlist {
+class AllTracksPlaylistType: PlaylistType {
     override val title: String = "Все песни"
 
     override fun createFragment(): Fragment {
-        return TracksFragment.newInstance(null)
+        return TracksFragment.newInstance(null, "all")
     }
 }
 
-class AlbumPlaylist: Playlist {
+class AlbumPlaylistType: PlaylistType {
     override val title: String = "Альбомы"
 
     override fun createFragment(): Fragment {
@@ -29,7 +29,7 @@ class AlbumPlaylist: Playlist {
     }
 }
 
-class ArtistPlaylist: Playlist {
+class ArtistPlaylistType: PlaylistType {
     override val title: String = "Исполнители"
 
     override fun createFragment(): Fragment {
@@ -37,7 +37,7 @@ class ArtistPlaylist: Playlist {
     }
 }
 
-class YearPlaylist: Playlist {
+class YearPlaylistType: PlaylistType {
     override val title: String = "Год"
 
     override fun createFragment(): Fragment {
@@ -45,12 +45,12 @@ class YearPlaylist: Playlist {
     }
 }
 
-class PlaylistManager {
-    private val _playlists = mutableListOf<Playlist>()
-    val playlists: List<Playlist>
-        get() = _playlists
+class PlaylistTypeManager {
+    private val _playlistTypes = mutableListOf<PlaylistType>()
+    val playlistTypes: List<PlaylistType>
+        get() = _playlistTypes
 
-    fun addPlaylist(playlist: Playlist) {
-        _playlists.add(playlist)
+    fun addPlaylistType(playlistType: PlaylistType) {
+        _playlistTypes.add(playlistType)
     }
 }

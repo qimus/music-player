@@ -9,9 +9,10 @@ import ru.den.musicplayer.R
 import ru.den.musicplayer.inflate
 import ru.den.musicplayer.models.Album
 import ru.den.musicplayer.models.Artist
+import ru.den.musicplayer.models.SoundEntity
 import ru.den.musicplayer.models.Year
 
-class ListAdapter<M : Any>(private val items: MutableList<M> = mutableListOf())
+class ListAdapter<M : SoundEntity>(private val items: MutableList<M> = mutableListOf())
     : RecyclerView.Adapter<ListAdapter<M>.ListViewHolder>(), Contract.Adapter<M> {
 
     private lateinit var onSelectItemListener: Contract.OnItemSelectContract<M>

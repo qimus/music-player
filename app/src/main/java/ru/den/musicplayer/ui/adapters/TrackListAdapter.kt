@@ -18,7 +18,7 @@ class TrackListAdapter(
         private const val TAG = "AudioFileAdapter"
     }
 
-    private var playingTrackIndex: Int = -1
+    private var playingTrackId: String = ""
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackListViewHolder {
         return TrackListViewHolder(parent.inflate(R.layout.track_item, false))
@@ -28,16 +28,12 @@ class TrackListAdapter(
 
     override fun onBindViewHolder(holder: TrackListViewHolder, position: Int) {
         val track = tracks[position]
-        holder.bind(track, position, position == playingTrackIndex)
+        holder.bind(track, position, track.id == playingTrackId)
     }
 
-    fun setActiveTrackIndex(ind: Int) {
-        val previousId = playingTrackIndex
-        playingTrackIndex = ind
-        notifyItemChanged(ind)
-        if (previousId > 0) {
-            notifyItemChanged(previousId)
-        }
+    fun setActiveTrackId(ind: String) {
+        playingTrackId = ind
+        notifyDataSetChanged()
     }
 
     fun updateItems(items: List<Track>) {
@@ -75,6 +71,6 @@ class TrackListAdapter(
     }
 
     interface OnTrackListener {
-        fun onTrackSelected(trackId: Int)
+        fun onTrackSelected(trackIndex: Int)
     }
 }

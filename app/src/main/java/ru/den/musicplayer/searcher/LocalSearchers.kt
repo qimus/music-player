@@ -8,16 +8,38 @@ import ru.den.musicplayer.models.Album
 import ru.den.musicplayer.models.Artist
 import ru.den.musicplayer.models.Track
 import ru.den.musicplayer.models.Year
+import java.io.InvalidClassException
 
 @Parcelize
 data class MusicSearchCriteria(
     var albumId: String? = null,
     var artistId: String? = null,
     var year: Int? = null
-) : Parcelable
+) : Parcelable {
 
-interface Searcher<T, R> {
-    fun search(criteria: T): R
+    companion object {
+        fun createFilterByModel(model: Any): MusicSearchCriteria {
+            val musicSearchCriteria = MusicSearchCriteria()
+            when (model::class) {
+                Album::class -> {
+                    musicSearchCriteria.albumId = (model as Album).id
+                }
+                Artist::class -> {
+                    musicSearchCriteria.artistId = (model as Artist).id
+                }
+                Year::class -> {
+                    musicSearchCriteria.year = (model as Year).year.toInt()
+                }
+                else -> throw InvalidClassException("Unknown search model")
+            }
+
+            return musicSearchCriteria
+        }
+    }
+}
+
+interface Searcher<C, R> {
+    fun search(criteria: C): R
 }
 
 class SelectionBuilder {
@@ -49,7 +71,7 @@ class SelectionBuilder {
     }
 }
 
-class TrackSearcher(val context: Context) : Searcher<MusicSearchCriteria?, List<Track>>{
+class TrackSearcher(val context: Context) : Searcher<MusicSearchCriteria?, List<Track>> {
     override fun search(criteria: MusicSearchCriteria?): List<Track> {
         val fileList = mutableListOf<Track>()
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
@@ -81,7 +103,7 @@ class TrackSearcher(val context: Context) : Searcher<MusicSearchCriteria?, List<
         cursor?.let {
             while (it.moveToNext()) {
                 val audioFile = Track(
-                    id = it.getInt(0),
+                    id = it.getString(0),
                     name = it.getString(1),
                     album = it.getString(2),
                     artist = it.getString(3),

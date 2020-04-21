@@ -30,12 +30,12 @@ interface MediaPlayer {
 }
 
 interface MediaPlayerCallbacks {
-    fun onStartPlay()
-    fun onPause()
-    fun onPlaying(progress: Int)
-    fun onStop()
-    fun onNextTrack()
-    fun onPrevTrack()
+    fun onStartPlay() {}
+    fun onPause() {}
+    fun onPlaying(progress: Int) {}
+    fun onStop() {}
+    fun onNextTrack() {}
+    fun onPrevTrack() {}
 }
 
 class MediaPlayerCallbacksComposite : MediaPlayerCallbacks {

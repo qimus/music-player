@@ -1,7 +1,6 @@
 package ru.den.musicplayer.ui
 
 import android.os.Bundle
-import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -10,14 +9,11 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.fragment_list.*
-import kotlinx.android.synthetic.main.track_item.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.qualifier.named
 
 import ru.den.musicplayer.R
-import ru.den.musicplayer.models.Album
-import ru.den.musicplayer.models.Artist
-import ru.den.musicplayer.models.Year
+import ru.den.musicplayer.models.SoundEntity
 import ru.den.musicplayer.searcher.MusicSearchCriteria
 import ru.den.musicplayer.searcher.Searcher
 import ru.den.musicplayer.ui.adapters.Contract
@@ -28,13 +24,16 @@ import ru.den.musicplayer.ui.viewmodel.ListViewModel
  * Use the [ListFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-class ListFragment<M : Any, S: Searcher<Unit?, List<M>>>(private val adapter: Contract.Adapter<M>, viewModelName: String) : Fragment() {
+class ListFragment<M : SoundEntity, S: Searcher<Unit?, List<M>>>(
+    private val adapter: Contract.Adapter<M>,
+    viewModelName: String
+) : Fragment() {
 
     companion object {
         private const val TAG = "ListFragment"
 
         @JvmStatic
-        fun <M : Any, S: Searcher<Unit?, List<M>>> newInstance(adapter: Contract.Adapter<M>, viewModelName: String) =
+        fun <M : SoundEntity, S: Searcher<Unit?, List<M>>> newInstance(adapter: Contract.Adapter<M>, viewModelName: String) =
             ListFragment<M, S>(adapter, viewModelName)
     }
 
@@ -42,20 +41,9 @@ class ListFragment<M : Any, S: Searcher<Unit?, List<M>>>(private val adapter: Co
 
     private val onSelectListener = object : Contract.OnItemSelectContract<M> {
         override fun onSelect(model: M) {
-            val musicSearchCriteria = MusicSearchCriteria()
-            when (model::class) {
-                Album::class -> {
-                    musicSearchCriteria.albumId = (model as Album).id
-                }
-                Artist::class -> {
-                    musicSearchCriteria.artistId = (model as Artist).id
-                }
-                Year::class -> {
-                    musicSearchCriteria.year = (model as Year).year.toInt()
-                }
-            }
+            val musicSearchCriteria = MusicSearchCriteria.createFilterByModel(model)
+            val fragment = TracksFragment.newInstance(musicSearchCriteria, viewModelName + model.id)
 
-            val fragment = TracksFragment.newInstance(musicSearchCriteria)
             activity?.supportFragmentManager?.let { fm ->
                 fm.beginTransaction()
                     .replace(R.id.fragmentContainer, fragment)

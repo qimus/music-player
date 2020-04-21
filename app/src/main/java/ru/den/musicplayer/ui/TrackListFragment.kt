@@ -9,7 +9,6 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.fragment_track_list.*
@@ -20,8 +19,7 @@ import kotlinx.android.synthetic.main.fragment_track_list.trackTitle
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
 import ru.den.musicplayer.convertDpToPx
-import ru.den.musicplayer.models.PlaylistManager
-import ru.den.musicplayer.models.Track
+import ru.den.musicplayer.models.PlaylistTypeManager
 import ru.den.musicplayer.ui.adapters.AlbumPagerAdapter
 
 enum class ScrollDirection {
@@ -44,7 +42,7 @@ class TrackListFragment : Fragment() {
         private var bottomPlayerIsVisible = false
     }
 
-    private val playlistManager: PlaylistManager by inject()
+    private val playlistTypeManager: PlaylistTypeManager by inject()
     //private val playlist = playlistManager.currentPlaylist
     //private val audioFilesAdapter = TrackListAdapter(mutableListOf(), this)
     private lateinit var mediaPlayerHost: MediaPlayer
@@ -159,7 +157,7 @@ class TrackListFragment : Fragment() {
         viewPager.adapter = albumPagerAdapter
 
         TabLayoutMediator(tabs, viewPager) { tab, position ->
-            tab.text = playlistManager.playlists[position].title
+            tab.text = playlistTypeManager.playlistTypes[position].title
         }.attach()
     }
 

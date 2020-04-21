@@ -11,18 +11,18 @@ import ru.den.musicplayer.searcher.TrackSearcher
 import ru.den.musicplayer.searcher.YearSearcher
 import ru.den.musicplayer.ui.viewmodel.ListViewModel
 import ru.den.musicplayer.ui.viewmodel.TracksViewModel
-import ru.den.musicplayer.utils.Playlist
 
 val appModule = module {
-    single { Playlist(androidContext()) }
     single {
-        PlaylistManager().apply {
-            addPlaylist(AllTracksPlaylist())
-            addPlaylist(AlbumPlaylist())
-            addPlaylist(ArtistPlaylist())
-            addPlaylist(YearPlaylist())
+        PlaylistTypeManager().apply {
+            addPlaylistType(AllTracksPlaylistType())
+            addPlaylistType(AlbumPlaylistType())
+            addPlaylistType(ArtistPlaylistType())
+            addPlaylistType(YearPlaylistType())
         }
     }
+
+    single { Playlist() }
 
     single { TrackSearcher(androidContext()) }
     single { AlbumSearcher(androidContext()) }

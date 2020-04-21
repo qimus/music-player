@@ -6,13 +6,13 @@ import android.provider.MediaStore
 import java.io.Serializable
 
 data class Track(
-    var id: Int,
+    override val id: String,
     var name: String,
     var cover: Bitmap? = null,
     var album: String? = null,
     var artist: String? = null,
     var duration: Int? = null
-) : Serializable {
+) : Serializable, SoundEntity {
     companion object {
         fun formatTrackTime(time: Int): String {
             val inSeconds = time / 1000

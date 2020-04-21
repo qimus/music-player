@@ -16,11 +16,9 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.media.session.MediaButtonReceiver
 import org.koin.android.ext.android.inject
-import ru.den.musicplayer.models.PlaylistManager
+import ru.den.musicplayer.models.Playlist
 import ru.den.musicplayer.models.Track
-import ru.den.musicplayer.models.playlist.Playlist
 import ru.den.musicplayer.ui.TrackListActivity
-import java.lang.Exception
 import java.util.*
 
 class MediaPlayerService : Service() {
@@ -46,7 +44,7 @@ class MediaPlayerService : Service() {
     private var track: Track? = null
     private lateinit var mediaSession: MediaSessionCompat
 
-    private val playlistManager: PlaylistManager by inject()
+    private val playlist: Playlist by inject()
 
     private val stateBuilder: PlaybackStateCompat.Builder = PlaybackStateCompat.Builder()
         .setActions(
@@ -58,151 +56,142 @@ class MediaPlayerService : Service() {
     private var timer: Timer? = null
 
     private val mediaSessionCallback = object : MediaSessionCompat.Callback() {
-//        private lateinit var lastTrack: Track
-//
-//        fun startTimer() {
-//            stopTimer()
-//
-//            timer = Timer()
-//            timer!!.schedule(object : TimerTask() {
-//                override fun run() {
-//                    try {
-//                        val playlist = playlistManager.currentPlaylist
-//                        player?.let {
-//                            playlist.trackProgress = it.currentPosition
-//                            val playbackState = stateBuilder
-//                                .setState(PlaybackStateCompat.STATE_PLAYING, it.currentPosition.toLong(), 1f)
-//                                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
-//                                .build()
-//                            mediaSession.setPlaybackState(playbackState)
-//                        }
-//                    } catch (e: Exception) {
-//                        Log.d(TAG, "Ошибка при отправке тек позиции трека: ${e.message}")
-//                        e.printStackTrace()
-//                    }
-//                }
-//            }, 0, 1000)
-//        }
-//
-//        fun stopTimer() {
-//            timer?.cancel()
-//        }
-//
-//        override fun onPlay() {
-//            val playlist = playlistManager.currentPlaylist
-//            val currentTrack = playlist?.currentTrack
-//
-//            currentTrack?.let {
-//                val metadata = MediaMetadataCompat.Builder()
-//                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTrack.name)
-//                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentTrack.artist)
-//                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentTrack.album)
-//                    .build()
-//
-//                mediaSession.setMetadata(metadata)
-//                mediaSession.isActive = true
-//
-//                if (player != null && lastTrack != currentTrack) {
-//                    onStop()
-//                }
-//
-//                val playbackState = stateBuilder
-//                    .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
-//                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
-//                    .build()
-//                mediaSession.setPlaybackState(playbackState)
-//
-//                if (player == null) {
-//                    player = MediaPlayer()
-//                    player?.setDataSource(applicationContext, currentTrack.getUri())
-//                    player?.setOnPreparedListener {
-//                        it.start()
-//                    }
-//                    player?.prepareAsync()
-//                    player?.setOnCompletionListener {
-//                        playlist.nextTrack()
-//                        this.onPlay()
-//                    }
-//                    lastTrack = currentTrack
-//                } else {
-//                    player?.start()
-//                }
-//                playlistManager.isPlaying = true
-//                startTimer()
-//            }
-//        }
-//
-//        override fun onPause() {
-//            player?.pause()
-//            stopTimer()
-//            playlistManager.isPlaying = false
-//
-//            val playbackState = stateBuilder
-//                .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
-//                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlistManager.currentPlaylist?.currentTrackInd ?: 0) })
-//                .build()
-//
-//            mediaSession.setPlaybackState(playbackState)
-//        }
-//
-//        override fun onStop() {
-//            player?.let {
-//                it.stop()
-//                it.release()
-//            }
-//            playlistManager.isPlaying = false
-//            player = null
-//
-//            mediaSession.isActive = false
-//            val playbackState = stateBuilder
-//                .setState(PlaybackStateCompat.STATE_STOPPED,
-//                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
-//                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlistManager.currentPlaylist?.currentTrackInd ?: 0) })
-//                .build()
-//
-//            mediaSession.setPlaybackState(playbackState)
-//        }
-//
-//        override fun onSkipToNext() {
-//            val playlist = playlistManager.currentPlaylist
-//            playlist?.let {
-//                val playbackState = stateBuilder
-//                    .setState(
-//                        PlaybackStateCompat.STATE_SKIPPING_TO_NEXT,
-//                        player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-//                        1f)
-//                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
-//                    .build()
-//
-//                mediaSession.setPlaybackState(playbackState)
-//
-//                onStop()
-//                playlist.nextTrack()
-//                onPlay()
-//            }
-//        }
-//
-//        override fun onSkipToPrevious() {
-//            playlistManager.currentPlaylist?.let { playlist ->
-//                val playbackState = stateBuilder
-//                    .setState(
-//                        PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
-//                        player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-//                        1f)
-//                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackInd) })
-//                    .build()
-//
-//                mediaSession.setPlaybackState(playbackState)
-//
-//                onStop()
-//                playlist.prevTrack()
-//                onPlay()
-//            }
-//        }
-//
-//        override fun onSeekTo(pos: Long) {
-//            player?.seekTo(pos.toInt())
-//        }
+        private lateinit var lastTrack: Track
+
+        fun startTimer() {
+            stopTimer()
+
+            timer = Timer()
+            timer!!.schedule(object : TimerTask() {
+                override fun run() {
+                    try {
+                        player?.let {
+                            playlist.trackProgress = it.currentPosition
+                            val playbackState = stateBuilder
+                                .setState(PlaybackStateCompat.STATE_PLAYING, it.currentPosition.toLong(), 1f)
+                                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                                .build()
+                            mediaSession.setPlaybackState(playbackState)
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Ошибка при отправке тек позиции трека: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+            }, 0, 1000)
+        }
+
+        fun stopTimer() {
+            timer?.cancel()
+        }
+
+        override fun onPlay() {
+            playlist.currentTrack?.let { currentTrack ->
+                val metadata = MediaMetadataCompat.Builder()
+                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTrack.name)
+                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentTrack.artist)
+                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, currentTrack.album)
+                    .build()
+
+                mediaSession.setMetadata(metadata)
+                mediaSession.isActive = true
+
+                if (player != null && lastTrack != currentTrack) {
+                    onStop()
+                }
+
+                val playbackState = stateBuilder
+                    .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
+                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                    .build()
+                mediaSession.setPlaybackState(playbackState)
+
+                if (player == null) {
+                    player = MediaPlayer()
+                    player?.setDataSource(applicationContext, currentTrack.getUri())
+                    player?.setOnPreparedListener {
+                        it.start()
+                    }
+                    player?.prepareAsync()
+                    player?.setOnCompletionListener {
+                        playlist.nextTrack()
+                        this.onPlay()
+                    }
+                    lastTrack = currentTrack
+                } else {
+                    player?.start()
+                }
+                playlist.isPlaying = true
+                startTimer()
+            }
+        }
+
+        override fun onPause() {
+            player?.pause()
+            stopTimer()
+            playlist.isPlaying = false
+
+            val playbackState = stateBuilder
+                .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+        }
+
+        override fun onStop() {
+            player?.let {
+                it.stop()
+                it.release()
+            }
+            playlist.isPlaying = false
+            player = null
+
+            mediaSession.isActive = false
+            val playbackState = stateBuilder
+                .setState(PlaybackStateCompat.STATE_STOPPED,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+        }
+
+        override fun onSkipToNext() {
+            val playbackState = stateBuilder
+                .setState(
+                    PlaybackStateCompat.STATE_SKIPPING_TO_NEXT,
+                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+
+            onStop()
+            playlist.nextTrack()
+            onPlay()
+        }
+
+        override fun onSkipToPrevious() {
+            val playbackState = stateBuilder
+                .setState(
+                    PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
+                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1f)
+                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                .build()
+
+            mediaSession.setPlaybackState(playbackState)
+
+            onStop()
+            playlist.prevTrack()
+            onPlay()
+        }
+
+        override fun onSeekTo(pos: Long) {
+            player?.seekTo(pos.toInt())
+        }
     }
 
     inner class PlayerServiceBinder : Binder() {
