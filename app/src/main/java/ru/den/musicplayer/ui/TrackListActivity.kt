@@ -86,6 +86,10 @@ class MediaPlayerCallbacksComposite : MediaPlayerCallbacks {
     }
 }
 
+interface BackPressedBehavior {
+    fun onBackPressed(): Boolean
+}
+
 class TrackListActivity : AppCompatActivity(), MediaPlayer {
 
     companion object {
@@ -170,6 +174,22 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
     override fun onDestroy() {
         super.onDestroy()
         unbindMediaPlayerService()
+    }
+
+    override fun onBackPressed() {
+        var isHandled = false
+        supportFragmentManager.fragments.forEach {
+            if (it is BackPressedBehavior) {
+                isHandled = it.onBackPressed()
+                if (isHandled) {
+                    return
+                }
+            }
+        }
+
+        if (!isHandled) {
+            super.onBackPressed()
+        }
     }
 
     private fun bindMediaPlayerService() {
