@@ -3,6 +3,9 @@ package ru.den.musicplayer.services
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Binder
 import android.os.Build
@@ -14,8 +17,12 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
 import org.koin.android.ext.android.inject
+import ru.den.musicplayer.R
+import ru.den.musicplayer.createNotificationBuilder
 import ru.den.musicplayer.models.Playlist
 import ru.den.musicplayer.models.Track
 import ru.den.musicplayer.ui.TrackListActivity
@@ -41,7 +48,6 @@ class MediaPlayerService : Service() {
     }
 
     private var player: MediaPlayer? = null
-    private var track: Track? = null
     private lateinit var mediaSession: MediaSessionCompat
 
     private val playlist: Playlist by inject()
@@ -54,6 +60,20 @@ class MediaPlayerService : Service() {
         )
 
     private var timer: Timer? = null
+    private lateinit var audioManager: AudioManager
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener {
+        when (it) {
+            AudioManager.AUDIOFOCUS_GAIN ->
+                mediaSessionCallback.onPlay()
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK ->
+                mediaSessionCallback.onPause()
+            else ->
+                mediaSessionCallback.onPause()
+        }
+    }
+
+    val focusLock = Any()
+    var focusRequest: AudioFocusRequest? = null
 
     private val mediaSessionCallback = object : MediaSessionCompat.Callback() {
         private lateinit var lastTrack: Track
@@ -68,8 +88,17 @@ class MediaPlayerService : Service() {
                         player?.let {
                             playlist.trackProgress = it.currentPosition
                             val playbackState = stateBuilder
-                                .setState(PlaybackStateCompat.STATE_PLAYING, it.currentPosition.toLong(), 1f)
-                                .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                                .setState(
+                                    PlaybackStateCompat.STATE_PLAYING,
+                                    it.currentPosition.toLong(),
+                                    1f
+                                )
+                                .setExtras(Bundle().apply {
+                                    putInt(
+                                        EXTRA_TRACK_ID,
+                                        playlist.currentTrackIndex
+                                    )
+                                })
                                 .build()
                             mediaSession.setPlaybackState(playbackState)
                         }
@@ -83,9 +112,18 @@ class MediaPlayerService : Service() {
 
         fun stopTimer() {
             timer?.cancel()
+            timer = null
         }
 
         override fun onPlay() {
+            val audioFocusResult = requestAudioFocus()
+
+            synchronized(focusLock) {
+                if (audioFocusResult != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                    return
+                }
+            }
+
             playlist.currentTrack?.let { currentTrack ->
                 val metadata = MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTrack.name)
@@ -102,27 +140,31 @@ class MediaPlayerService : Service() {
 
                 val playbackState = stateBuilder
                     .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
-                    .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
+                    .setExtras(Bundle().apply {
+                        putInt(
+                            EXTRA_TRACK_ID,
+                            playlist.currentTrackIndex
+                        )
+                    })
                     .build()
                 mediaSession.setPlaybackState(playbackState)
 
                 if (player == null) {
                     player = MediaPlayer()
-                    player?.setDataSource(applicationContext, currentTrack.getUri())
-                    player?.setOnPreparedListener {
-                        it.start()
-                    }
-                    player?.prepareAsync()
-                    player?.setOnCompletionListener {
+                    player!!.setDataSource(applicationContext, currentTrack.getUri())
+                    player!!.setOnPreparedListener { it.start() }
+                    player!!.prepareAsync()
+                    player!!.setOnCompletionListener {
                         playlist.nextTrack()
                         this.onPlay()
                     }
                     lastTrack = currentTrack
                 } else {
-                    player?.start()
+                    player!!.start()
                 }
                 playlist.isPlaying = true
                 startTimer()
+                updateForegroundNotification(PlaybackStateCompat.STATE_PLAYING)
             }
         }
 
@@ -132,11 +174,16 @@ class MediaPlayerService : Service() {
             playlist.isPlaying = false
 
             val playbackState = stateBuilder
-                .setState(PlaybackStateCompat.STATE_PAUSED, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .setState(
+                    PlaybackStateCompat.STATE_PAUSED,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1f
+                )
                 .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
                 .build()
 
             mediaSession.setPlaybackState(playbackState)
+            updateForegroundNotification(PlaybackStateCompat.STATE_PAUSED)
         }
 
         override fun onStop() {
@@ -146,23 +193,29 @@ class MediaPlayerService : Service() {
             }
             playlist.isPlaying = false
             player = null
+            abandonAudioFocus()
 
             mediaSession.isActive = false
             val playbackState = stateBuilder
-                .setState(PlaybackStateCompat.STATE_STOPPED,
-                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .setState(
+                    PlaybackStateCompat.STATE_STOPPED,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f
+                )
                 .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
                 .build()
 
             mediaSession.setPlaybackState(playbackState)
+            updateForegroundNotification(PlaybackStateCompat.STATE_STOPPED)
         }
 
         override fun onSkipToNext() {
             val playbackState = stateBuilder
                 .setState(
                     PlaybackStateCompat.STATE_SKIPPING_TO_NEXT,
-                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                    1f)
+                    player?.currentPosition?.toLong()
+                        ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1f
+                )
                 .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
                 .build()
 
@@ -177,8 +230,10 @@ class MediaPlayerService : Service() {
             val playbackState = stateBuilder
                 .setState(
                     PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
-                    player?.currentPosition?.toLong() ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                    1f)
+                    player?.currentPosition?.toLong()
+                        ?: PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                    1f
+                )
                 .setExtras(Bundle().apply { putInt(EXTRA_TRACK_ID, playlist.currentTrackIndex) })
                 .build()
 
@@ -207,6 +262,8 @@ class MediaPlayerService : Service() {
     override fun onCreate() {
         super.onCreate()
 
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
         mediaSession = MediaSessionCompat(this, "MediaPlayer")
         mediaSession.setCallback(mediaSessionCallback)
         val activityIntent = Intent(applicationContext, TrackListActivity::class.java)
@@ -214,40 +271,126 @@ class MediaPlayerService : Service() {
             PendingIntent.getActivity(applicationContext, 0, activityIntent, 0)
         )
 
-        val mediaButtonIntent = Intent(Intent.ACTION_MEDIA_BUTTON,
-            null, applicationContext, MediaPlayerService::class.java)
+        val mediaButtonIntent = Intent(
+            Intent.ACTION_MEDIA_BUTTON,
+            null, applicationContext, MediaPlayerService::class.java
+        )
         mediaSession.setMediaButtonReceiver(
             PendingIntent.getBroadcast(applicationContext, 0, mediaButtonIntent, 0)
         )
+    }
 
-        createNotification()
+    private fun requestAudioFocus(): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            focusRequest =
+                focusRequest ?: AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).run {
+                    setAudioAttributes(AudioAttributes.Builder().run {
+                        setUsage(AudioAttributes.USAGE_MEDIA)
+                        setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        build()
+                    })
+                    setAcceptsDelayedFocusGain(true)
+                    setOnAudioFocusChangeListener(audioFocusChangeListener)
+                    build()
+                }
+
+            return audioManager.requestAudioFocus(focusRequest!!)
+        }
+
+        return audioManager.requestAudioFocus(
+            audioFocusChangeListener,
+            AudioManager.STREAM_MUSIC,
+            AudioManager.AUDIOFOCUS_GAIN
+        )
+    }
+
+    private fun abandonAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            audioManager.abandonAudioFocus(audioFocusChangeListener)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createChannel() {
-        val notificationManager = this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(CHANNEL_ID, "Media playback", NotificationManager.IMPORTANCE_LOW)
+        val notificationManager =
+            this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel =
+            NotificationChannel(CHANNEL_ID, "Media playback", NotificationManager.IMPORTANCE_LOW)
         channel.setShowBadge(false)
         channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun createNotification(): Notification {
+    private fun updateForegroundNotification(playbackState: Int) {
+        when (playbackState) {
+            PlaybackStateCompat.STATE_PLAYING ->
+                startForeground(NOTIFICATION_ID, createNotification(playbackState))
+            PlaybackStateCompat.STATE_PAUSED -> {
+                NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, createNotification(playbackState))
+                stopForeground(false)
+            }
+            else -> stopForeground(true)
+        }
+    }
+
+    private fun createNotification(playbackState: Int): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createChannel()
         }
 
+        val notificationBuilder = mediaSession.createNotificationBuilder(this, CHANNEL_ID)
+        notificationBuilder
+            .addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_bottom_prev, "Пред",
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        this,
+                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                    )
+                )
+            )
+
+        if (playbackState == PlaybackStateCompat.STATE_PLAYING) {
+            notificationBuilder.addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_pause_circle, "Пауза",
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)
+                )
+            )
+        } else {
+            notificationBuilder.addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_play_circle, "Воспр",
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY)
+                )
+            )
+        }
+
+        notificationBuilder.addAction(
+            NotificationCompat.Action(
+                R.drawable.ic_bottom_next, "След",
+                MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+            )
+        )
+
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
             .setShowActionsInCompactView(1)
-            .setMediaSession(mediaSession.sessionToken)
             .setShowCancelButton(true)
+            .setCancelButtonIntent(
+                MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP)
+            )
+            .setMediaSession(mediaSession.sessionToken)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle(track?.name)
-            .setContentText("Artist - Album")
-            .setStyle(mediaStyle)
-            .build()
+        return notificationBuilder.run {
+            setStyle(mediaStyle)
+            setSmallIcon(R.drawable.ic_music_note)
+            color = ContextCompat.getColor(this@MediaPlayerService, R.color.colorPrimaryDark)
+            setShowWhen(false)
+            priority = NotificationCompat.PRIORITY_HIGH
+            build()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
