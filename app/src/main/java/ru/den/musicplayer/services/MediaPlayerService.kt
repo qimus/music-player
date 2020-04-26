@@ -344,7 +344,7 @@ class MediaPlayerService : Service() {
         notificationBuilder
             .addAction(
                 NotificationCompat.Action(
-                    R.drawable.ic_bottom_prev, "Пред",
+                    android.R.drawable.ic_media_previous, "Пред",
                     MediaButtonReceiver.buildMediaButtonPendingIntent(
                         this,
                         PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
@@ -355,14 +355,14 @@ class MediaPlayerService : Service() {
         if (playbackState == PlaybackStateCompat.STATE_PLAYING) {
             notificationBuilder.addAction(
                 NotificationCompat.Action(
-                    R.drawable.ic_pause_circle, "Пауза",
+                    android.R.drawable.ic_media_pause, "Пауза",
                     MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)
                 )
             )
         } else {
             notificationBuilder.addAction(
                 NotificationCompat.Action(
-                    R.drawable.ic_play_circle, "Воспр",
+                    android.R.drawable.ic_media_play, "Воспр",
                     MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY)
                 )
             )
@@ -370,12 +370,12 @@ class MediaPlayerService : Service() {
 
         notificationBuilder.addAction(
             NotificationCompat.Action(
-                R.drawable.ic_bottom_next, "След",
+                android.R.drawable.ic_media_next, "След",
                 MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
             )
         )
 
-        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
+        val mediaStyle = androidx.media.app.NotificationCompat.DecoratedMediaCustomViewStyle()
             .setShowActionsInCompactView(1)
             .setShowCancelButton(true)
             .setCancelButtonIntent(
