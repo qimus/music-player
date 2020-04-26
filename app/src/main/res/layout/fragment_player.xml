@@ -4,12 +4,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/miniPlayerLayout"
     android:layout_width="match_parent"
-    android:layout_height="75dp"
+    android:layout_height="0dp"
+    android:visibility="invisible"
     android:elevation="6dp"
+    tools:visibility="visible"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
-    tools:layout_height="match_parent">
+    tools:layout_height="75dp">
 
     <View
         android:id="@+id/transp"
@@ -19,7 +21,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintEnd_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="gone" />
+        tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatSeekBar
         android:id="@+id/progressBar"
@@ -38,7 +40,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/transp"
         tools:progress="40"
-        tools:visibility="gone" />
+        tools:visibility="visible" />
 
     <RelativeLayout
         android:id="@+id/miniPlayer"
@@ -49,7 +51,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/transp"
-        tools:visibility="gone">
+        tools:visibility="visible">
 
         <ImageView
             android:id="@+id/prev"
@@ -77,32 +79,33 @@
             android:layout_toEndOf="@id/musicAction"
             android:src="@drawable/ic_bottom_next" />
 
-        <TextView
-            android:id="@+id/trackTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="15dp"
-            android:layout_toEndOf="@id/next"
-            android:ellipsize="end"
-            android:lines="1"
-            android:text="Название песни"
-            android:textColor="#fff" />
-
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="15dp"
+            android:layout_toEndOf="@id/next">
+            <TextView
+                android:id="@+id/trackTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:ellipsize="marquee"
+                android:singleLine="true"
+                android:text="Название песни"
+                android:textColor="#fff" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/elapsedTime"
+            style="@style/TrackItemAlbum"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
             android:layout_marginTop="5dp"
-            android:layout_marginEnd="14dp">
-
-            <TextView
-                android:id="@+id/elapsedTime"
-                style="@style/TrackItemAlbum"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0:00/0:00" />
-        </LinearLayout>
+            android:layout_marginEnd="10dp"
+            android:text="0:00/0:00" />
     </RelativeLayout>
 
     <ImageView
@@ -118,10 +121,13 @@
     <TextView
         android:id="@+id/trackTitle2"
         style="@style/PlayerTrackTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="17dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:text="Название песни"
+        android:gravity="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/album" />
@@ -160,7 +166,7 @@
         android:id="@+id/progressBar2"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="0dp"
-        android:layout_height="14dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="1dp"
         android:layout_marginTop="196dp"
         android:progress="0"

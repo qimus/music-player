@@ -160,6 +160,7 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
         albumSearcher.search(null)
 
         bindFragment()
+        MediaPlayerService.startService(applicationContext)
         bindMediaPlayerService()
     }
 
@@ -246,7 +247,6 @@ class TrackListActivity : AppCompatActivity(), MediaPlayer {
     }
 
     override fun play() {
-        Log.d(TAG, "Play")
         mediaController?.transportControls?.play()
     }
 

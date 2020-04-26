@@ -14,11 +14,12 @@ import androidx.fragment.app.Fragment
 import kotlinx.android.synthetic.main.fragment_player.*
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
+import ru.den.musicplayer.convertDpToPx
 import ru.den.musicplayer.models.Playlist
 import ru.den.musicplayer.models.Track
 
 enum class PlayerSlideState {
-    OPENED, COLLAPSED
+    OPENED, COLLAPSED, INVISIBLE
 }
 
 /**
@@ -30,6 +31,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
 
     companion object {
         private const val TAG = "PlayerFragment"
+        private const val PLAYER_MIN_HEIGHT = 85f
 
         @JvmStatic
         fun newInstance() = PlayerFragment()
@@ -44,7 +46,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     private var layoutHeight = 0
     private var minPlayerHeightPx = 0
     private lateinit var gestureDetector: GestureDetector
-    private var playerState = PlayerSlideState.COLLAPSED
+    private var playerState = PlayerSlideState.INVISIBLE
 
     private var gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onScroll(
@@ -62,7 +64,6 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
             }
 
             if (layoutHeight - e2.y < minPlayerHeightPx || offset > maxViewHeightPx + 50) {
-                Log.d(TAG, "${maxViewHeightPx - e2.y} < $minPlayerHeightPx")
                 return true
             }
             //Log.d(TAG, "${e1.y} ${e2.y} ${offset}")
@@ -82,6 +83,10 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         override fun onStartPlay() {
             super.onStartPlay()
             updateControlsState()
+            if (playlist.isPlaying && playerState == PlayerSlideState.INVISIBLE) {
+                showBottomMediaPlayerControl()
+                playerState = PlayerSlideState.COLLAPSED
+            }
         }
 
         override fun onPause() {
@@ -112,11 +117,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
 
     override fun onBackPressed(): Boolean {
         if (playerState == PlayerSlideState.OPENED) {
-            miniPlayerRollUp(
-                miniPlayerLayout.layoutParams.height,
-                minPlayerHeightPx
-            )
-            playerState = PlayerSlideState.COLLAPSED
+            collapsePlayer()
             return true
         }
 
@@ -124,13 +125,13 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     }
 
     private fun updateProgress(progress: Int, max: Int = playlist.currentTrack?.duration ?: 100) {
-        progressBar?.max = max
-        progressBar?.progress = progress
-        elapsedTime?.text =
-            "${Track.formatTrackTime(progressBar.progress)}/${Track.formatTrackTime(max)}"
+        progressBar.max = max
+        progressBar.progress = progress
+        elapsedTime.text =
+            "${Track.formatTrackTime(progress)}/${Track.formatTrackTime(max)}"
 
-        progressBar2?.max = max
-        progressBar2?.progress = progress
+        progressBar2.max = max
+        progressBar2.progress = progress
 
         playedTime.text = Track.formatTrackTime(progressBar.progress)
         estimateTime.text = Track.formatTrackTime(max)
@@ -152,10 +153,6 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     override fun onAttach(context: Context) {
         super.onAttach(context)
         mediaPlayer = context as MediaPlayer
@@ -164,6 +161,12 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     override fun onResume() {
         super.onResume()
         mediaPlayer.registerMediaPlayerCallbacks(mediaPlayerCallbacks)
+        if (playlist.isPlaying && playerState == PlayerSlideState.INVISIBLE) {
+            showBottomMediaPlayerControl()
+            playerState = PlayerSlideState.COLLAPSED
+        }
+        updateTrackName()
+        updateControlsState()
     }
 
     override fun onPause() {
@@ -176,8 +179,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         savedInstanceState: Bundle?
     ): View? {
         val view: View = inflater.inflate(R.layout.fragment_player, container, false)
-        minPlayerHeightPx = view.layoutParams.height
-        currentPlayerHeight = view.layoutParams.height
+        minPlayerHeightPx = view.context.convertDpToPx(PLAYER_MIN_HEIGHT).toInt()
 
         return view
     }
@@ -185,6 +187,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         gestureDetector = GestureDetector(view.context, gestureListener)
+        trackTitle.isSelected = true
 
         val rootView = view.rootView as ViewGroup
         val mainLayout = rootView.findViewById<ConstraintLayout>(R.id.mainLayout)
@@ -200,21 +203,12 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
                 when (event.action) {
                     MotionEvent.ACTION_UP -> {
                         if (lastScrollDirection == ScrollDirection.UP) {
-                            miniPlayerRollUp(miniPlayerLayout.layoutParams.height, maxViewHeightPx)
-                            playerState = PlayerSlideState.OPENED
+                            showFullPlayer()
                         } else {
                             if (miniPlayerLayout.height.toFloat() / maxViewHeightPx > 0.6) {
-                                miniPlayerRollUp(
-                                    miniPlayerLayout.layoutParams.height,
-                                    maxViewHeightPx
-                                )
-                                playerState = PlayerSlideState.OPENED
+                                showFullPlayer()
                             } else {
-                                miniPlayerRollUp(
-                                    miniPlayerLayout.layoutParams.height,
-                                    minPlayerHeightPx
-                                )
-                                playerState = PlayerSlideState.COLLAPSED
+                                collapsePlayer()
                             }
                         }
                     }
@@ -249,6 +243,22 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         }
 
         configureMediaPlayer()
+    }
+
+    private fun showFullPlayer() {
+        miniPlayerRollUp(
+            miniPlayerLayout.layoutParams.height,
+            maxViewHeightPx
+        )
+        playerState = PlayerSlideState.OPENED
+    }
+
+    private fun collapsePlayer() {
+        miniPlayerRollUp(
+            miniPlayerLayout.layoutParams.height,
+            minPlayerHeightPx
+        )
+        playerState = PlayerSlideState.COLLAPSED
     }
 
     private fun configureMediaPlayer() {
