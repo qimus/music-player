@@ -17,6 +17,8 @@ import ru.den.musicplayer.searcher.ArtistSearcher
 import ru.den.musicplayer.searcher.TrackSearcher
 import ru.den.musicplayer.searcher.YearSearcher
 import ru.den.musicplayer.ui.myplaylists.PlaylistsViewModel
+import ru.den.musicplayer.ui.myplaylists.chooseTracks.ChooseTracksViewModel
+import ru.den.musicplayer.ui.myplaylists.create.PlaylistEditViewModel
 import ru.den.musicplayer.ui.viewmodel.ListViewModel
 import ru.den.musicplayer.ui.viewmodel.TracksViewModel
 
@@ -50,6 +52,8 @@ val viewModelModule = module {
     viewModel(named("year")) { ListViewModel<Year, Unit, YearSearcher>(get()) }
 
     viewModel { PlaylistsViewModel(get()) }
+    viewModel { PlaylistEditViewModel(get(), get()) }
+    viewModel { ChooseTracksViewModel(get()) }
 }
 
 val databaseModule = module {

@@ -14,7 +14,8 @@ import java.io.InvalidClassException
 data class MusicSearchCriteria(
     var albumId: String? = null,
     var artistId: String? = null,
-    var year: Int? = null
+    var year: Int? = null,
+    var title: String? = null
 ) : Parcelable {
 
     companion object {
@@ -93,6 +94,10 @@ class TrackSearcher(val context: Context) : Searcher<MusicSearchCriteria?, List<
 
         criteria?.year?.let {
             selectionBuilder.addSelection("${MediaStore.Audio.Media.YEAR} = ?", arrayOf(it.toString()))
+        }
+
+        criteria?.title?.let { title ->
+            selectionBuilder.addSelection("${MediaStore.Audio.Media.DISPLAY_NAME} LIKE ?", arrayOf("%${title}%"))
         }
 
         val (selection, selectionArgs) = selectionBuilder.getQuery()
