@@ -52,7 +52,7 @@ val viewModelModule = module {
     viewModel(named("year")) { ListViewModel<Year, Unit, YearSearcher>(get()) }
 
     viewModel { PlaylistsViewModel(get()) }
-    viewModel { PlaylistEditViewModel(get(), get()) }
+    viewModel { PlaylistEditViewModel(get(), get(), get()) }
     viewModel { ChooseTracksViewModel(get()) }
 }
 

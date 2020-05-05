@@ -14,6 +14,11 @@ class ChooseTracksViewModel(private val searcher: TrackSearcher) : ViewModel() {
 
     val isSearch = MutableLiveData(false)
     val searchValue = MutableLiveData("")
+    val selectedItems = mutableSetOf<String>()
+
+    private val _eventOnSaveTracks = MutableLiveData<Boolean>()
+    val eventOnSaveTracks: LiveData<Boolean>
+        get() = _eventOnSaveTracks
 
     fun setIsSearchMode() {
         if (isSearch.value == false) {
@@ -24,5 +29,13 @@ class ChooseTracksViewModel(private val searcher: TrackSearcher) : ViewModel() {
 
     fun searchTracks(criteria: MusicSearchCriteria?) {
         _tracks.value = searcher.search(criteria)
+    }
+
+    fun addTracks() {
+        _eventOnSaveTracks.value = true
+    }
+
+    fun onSaveTracksFinished() {
+        _eventOnSaveTracks.value = false
     }
 }

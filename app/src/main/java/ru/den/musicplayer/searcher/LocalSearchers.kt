@@ -3,6 +3,7 @@ package ru.den.musicplayer.searcher
 import android.content.Context
 import android.os.Parcelable
 import android.provider.MediaStore
+import android.util.Log
 import kotlinx.android.parcel.Parcelize
 import ru.den.musicplayer.models.Album
 import ru.den.musicplayer.models.Artist
@@ -15,7 +16,8 @@ data class MusicSearchCriteria(
     var albumId: String? = null,
     var artistId: String? = null,
     var year: Int? = null,
-    var title: String? = null
+    var title: String? = null,
+    var trackIds: List<String>? = null
 ) : Parcelable {
 
     companion object {
@@ -98,6 +100,10 @@ class TrackSearcher(val context: Context) : Searcher<MusicSearchCriteria?, List<
 
         criteria?.title?.let { title ->
             selectionBuilder.addSelection("${MediaStore.Audio.Media.DISPLAY_NAME} LIKE ?", arrayOf("%${title}%"))
+        }
+
+        criteria?.trackIds?.let { ids ->
+            selectionBuilder.addSelection("${MediaStore.Audio.Media._ID} IN (${ids.joinToString(",")})", arrayOf())
         }
 
         val (selection, selectionArgs) = selectionBuilder.getQuery()
