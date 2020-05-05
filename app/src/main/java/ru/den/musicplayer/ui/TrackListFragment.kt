@@ -3,6 +3,7 @@ package ru.den.musicplayer.ui
 import android.content.Context
 import android.os.Bundle
 import android.view.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -41,6 +42,7 @@ class TrackListFragment : Fragment() {
 
         albumPagerAdapter = AlbumPagerAdapter(this)
         viewPager.adapter = albumPagerAdapter
+        (activity as AppCompatActivity).supportActionBar?.title = "YAMPlayer"
 
         TabLayoutMediator(tabs, viewPager) { tab, position ->
             tab.text = playlistsManager.playlistTypes[position].title
