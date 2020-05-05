@@ -4,7 +4,6 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
@@ -15,7 +14,7 @@ import kotlinx.android.synthetic.main.fragment_player.*
 import org.koin.android.ext.android.inject
 import ru.den.musicplayer.R
 import ru.den.musicplayer.convertDpToPx
-import ru.den.musicplayer.models.Playlist
+import ru.den.musicplayer.models.CurrentPlaylist
 import ru.den.musicplayer.models.Track
 
 enum class PlayerSlideState {
@@ -37,7 +36,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         fun newInstance() = PlayerFragment()
     }
 
-    private val playlist: Playlist by inject()
+    private val currentPlaylist: CurrentPlaylist by inject()
 
     private lateinit var mediaPlayer: MediaPlayer
     private var currentPlayerHeight = 0
@@ -83,7 +82,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         override fun onStartPlay() {
             super.onStartPlay()
             updateControlsState()
-            if (playlist.isPlaying && playerState == PlayerSlideState.INVISIBLE) {
+            if (currentPlaylist.isPlaying && playerState == PlayerSlideState.INVISIBLE) {
                 showBottomMediaPlayerControl()
                 playerState = PlayerSlideState.COLLAPSED
             }
@@ -124,7 +123,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
         return false
     }
 
-    private fun updateProgress(progress: Int, max: Int = playlist.currentTrack?.duration ?: 100) {
+    private fun updateProgress(progress: Int, max: Int = currentPlaylist.currentTrack?.duration ?: 100) {
         progressBar.max = max
         progressBar.progress = progress
         elapsedTime.text =
@@ -161,7 +160,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     override fun onResume() {
         super.onResume()
         mediaPlayer.registerMediaPlayerCallbacks(mediaPlayerCallbacks)
-        if (playlist.isPlaying && playerState == PlayerSlideState.INVISIBLE) {
+        if (currentPlaylist.isPlaying && playerState == PlayerSlideState.INVISIBLE) {
             showBottomMediaPlayerControl()
             playerState = PlayerSlideState.COLLAPSED
         }
@@ -263,7 +262,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
 
     private fun configureMediaPlayer() {
         val onPlayListener: View.OnClickListener = View.OnClickListener {
-            if (playlist.isPlaying) {
+            if (currentPlaylist.isPlaying) {
                 mediaPlayer.pause()
             } else {
                 mediaPlayer.play()
@@ -301,7 +300,7 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     }
 
     private fun updateControlsState() {
-        if (playlist.isPlaying) {
+        if (currentPlaylist.isPlaying) {
             musicAction.setImageResource(R.drawable.ic_bottom_pause)
             play2.setImageResource(R.drawable.ic_bottom_pause)
         } else {
@@ -313,9 +312,9 @@ class PlayerFragment : Fragment(), BackPressedBehavior {
     }
 
     private fun updateTrackName() {
-        trackTitle.text = playlist.currentTrack?.name
-        trackTitle2.text = playlist.currentTrack?.name
-        trackAlbum.text = playlist.currentTrack?.album
+        trackTitle.text = currentPlaylist.currentTrack?.name
+        trackTitle2.text = currentPlaylist.currentTrack?.name
+        trackAlbum.text = currentPlaylist.currentTrack?.album
     }
 
     private fun updateMiniPlayerVisible(alpha: Float) {

@@ -1,11 +1,16 @@
 package ru.den.musicplayer.models
 
-class Playlist {
+class CurrentPlaylist {
     private val _tracks = mutableListOf<Track>();
     val tracks: List<Track>
         get() = _tracks
 
     var isPlaying = false
+        set(value) {
+            synchronized(this) {
+                field = value
+            }
+        }
     var trackProgress = 0
     var playlistName: String = ""
     var currentTrackIndex = 0
@@ -13,9 +18,11 @@ class Playlist {
         get() = if (tracks.isNotEmpty()) tracks[currentTrackIndex] else null
 
     fun setTracks(tracks: List<Track>) {
-        _tracks.clear()
-        _tracks.addAll(tracks)
-        currentTrackIndex = 0
+        synchronized(this) {
+            _tracks.clear()
+            _tracks.addAll(tracks)
+            currentTrackIndex = 0
+        }
     }
 
     fun addTracks(tracks: List<Track>) {

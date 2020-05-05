@@ -13,7 +13,7 @@ import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 import ru.den.musicplayer.R
-import ru.den.musicplayer.models.Playlist
+import ru.den.musicplayer.models.CurrentPlaylist
 import ru.den.musicplayer.models.Track
 import ru.den.musicplayer.searcher.MusicSearchCriteria
 import ru.den.musicplayer.searcher.TrackSearcher
@@ -31,14 +31,14 @@ class TracksFragment : Fragment(), TrackListAdapter.OnTrackListener {
     private val audioFilesAdapter = TrackListAdapter(mutableListOf(), this)
     private var searchCriteria: MusicSearchCriteria? = null
     private val viewModel: TracksViewModel by viewModel()
-    private val playlist: Playlist by inject()
+    private val currentPlaylist: CurrentPlaylist by inject()
     private lateinit var playlistName: String
     private var tracks = listOf<Track>()
     private lateinit var mediaPlayerHost: MediaPlayer
 
     private var mediaCallbacks = object : MediaPlayerCallbacks {
         override fun onStartPlay() {
-            playlist.currentTrack?.let {
+            currentPlaylist.currentTrack?.let {
                 audioFilesAdapter.setActiveTrackId(it.id)
             }
         }
@@ -48,8 +48,8 @@ class TracksFragment : Fragment(), TrackListAdapter.OnTrackListener {
         super.onStart()
         mediaPlayerHost.registerMediaPlayerCallbacks(mediaCallbacks)
 
-        val trackId = playlist.currentTrack?.id
-        if (playlist.isPlaying && trackId != null) {
+        val trackId = currentPlaylist.currentTrack?.id
+        if (currentPlaylist.isPlaying && trackId != null) {
             audioFilesAdapter.setActiveTrackId(trackId)
         }
     }
@@ -102,14 +102,14 @@ class TracksFragment : Fragment(), TrackListAdapter.OnTrackListener {
     }
 
     override fun onTrackSelected(trackIndex: Int) {
-        if (playlist.playlistName != playlistName) {
-            playlist.playlistName = playlistName
-            playlist.setTracks(tracks)
+        if (currentPlaylist.playlistName != playlistName) {
+            currentPlaylist.playlistName = playlistName
+            currentPlaylist.setTracks(tracks)
         }
 
-        playlist.currentTrackIndex = trackIndex
+        currentPlaylist.currentTrackIndex = trackIndex
         mediaPlayerHost.play()
-        playlist.currentTrack?.let {
+        currentPlaylist.currentTrack?.let {
             audioFilesAdapter.setActiveTrackId(it.id)
         }
     }

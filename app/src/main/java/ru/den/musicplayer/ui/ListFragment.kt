@@ -39,7 +39,7 @@ class ListFragment<M : SoundEntity, S: Searcher<Unit?, List<M>>>(
 
     private val viewModel: ListViewModel<M, Unit?, S> by viewModel(named(viewModelName))
 
-    private val onSelectListener = object : Contract.OnItemSelectContract<M> {
+    private val onSelectListener = object : Contract.OnSelectItem<M> {
         override fun onSelect(model: M) {
             val musicSearchCriteria = MusicSearchCriteria.createFilterByModel(model)
             val fragment = TracksFragment.newInstance(musicSearchCriteria, viewModelName + model.id)

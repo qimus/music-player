@@ -15,7 +15,7 @@ import ru.den.musicplayer.models.Year
 class ListAdapter<M : SoundEntity>(private val items: MutableList<M> = mutableListOf())
     : RecyclerView.Adapter<ListAdapter<M>.ListViewHolder>(), Contract.Adapter<M> {
 
-    private lateinit var onSelectItemListener: Contract.OnItemSelectContract<M>
+    private lateinit var onSelectListener: Contract.OnSelectItem<M>
 
     override fun updateItems(items: List<M>) {
         this.items.clear()
@@ -23,8 +23,8 @@ class ListAdapter<M : SoundEntity>(private val items: MutableList<M> = mutableLi
         notifyDataSetChanged()
     }
 
-    override fun setOnItemSelectListener(onItemSelectListener: Contract.OnItemSelectContract<M>) {
-        this.onSelectItemListener = onItemSelectListener
+    override fun setOnItemSelectListener(onSelectListener: Contract.OnSelectItem<M>) {
+        this.onSelectListener = onSelectListener
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
@@ -41,7 +41,7 @@ class ListAdapter<M : SoundEntity>(private val items: MutableList<M> = mutableLi
     inner class ListViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun bind(item: M) {
             itemView.setOnClickListener {
-                onSelectItemListener.onSelect(item)
+                onSelectListener.onSelect(item)
             }
 
             when (item::class) {

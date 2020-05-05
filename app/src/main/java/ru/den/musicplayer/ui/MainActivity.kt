@@ -90,7 +90,7 @@ interface BackPressedBehavior {
     fun onBackPressed(): Boolean
 }
 
-class TrackListActivity : AppCompatActivity(), MediaPlayer {
+class MainActivity : AppCompatActivity(), MediaPlayer {
 
     companion object {
         private const val TAG = "TrackListActivity"
